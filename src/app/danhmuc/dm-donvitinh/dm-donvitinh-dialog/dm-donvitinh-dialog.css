@@ -1,0 +1,25 @@
+.form-row {
+  margin-bottom: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.date-fields {
+  display: flex;
+  gap: 16px;
+}
+
+.date-fields mat-form-field {
+  flex: 1;
+}
+
+mat-dialog-content {
+  min-width: 400px;
+  padding-top: 10px;
+}
+
+textarea {
+  min-height: 80px;
+}
