@@ -1,0 +1,60 @@
+<div class="sidenav-header">
+    <img [width]="profilePicSize()" [height]="profilePicSize()" src="/assets/user.png">
+    <div class="header-text" [class.hide-header-text]="sideNavCollapsed()">
+        <h2>Your Chanel</h2>
+        <p>Le Minh Huy</p>
+    </div>
+</div>
+
+<mat-nav-list>
+    @for(item of menuItems(); track item.label) {
+        @if(item.children && item.children.length > 0) {
+            <!-- Menu item với dropdown -->
+            <mat-expansion-panel class="menu-expansion-panel" [disabled]="sideNavCollapsed()">
+                <mat-expansion-panel-header class="menu-item">
+                    <mat-panel-title>
+                        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+                        @if(!sideNavCollapsed()) {
+                            <span class="menu-label">{{ item.label }}</span>
+                        }
+                    </mat-panel-title>
+                </mat-expansion-panel-header>
+                
+                @if(!sideNavCollapsed()) {
+                    <div class="submenu-container">
+                        @for(child of item.children; track child.label) {
+                            <a 
+                            mat-list-item 
+                            class="submenu-item"
+                            [routerLink]="child.route"
+                            routerLinkActive="selected-menu-item"
+                            #rla="routerLinkActive"
+                            [activated]="rla.isActive">
+                                <mat-icon
+                                [fontSet]="rla.isActive ? 'material-icons' : 'material-icons-outlined'"
+                                matListItemIcon>{{ child.icon }}</mat-icon>
+                                <span matListItemTitle>{{ child.label }}</span>
+                            </a>
+                        }
+                    </div>
+                }
+            </mat-expansion-panel>
+        } @else {
+            <!-- Menu item thông thường -->
+            <a 
+            mat-list-item 
+            class="menu-item"
+            [routerLink]="item.route"
+            routerLinkActive="selected-menu-item"
+            #rla="routerLinkActive"
+            [activated]="rla.isActive">
+                <mat-icon
+                [fontSet]="rla.isActive ? 'material-icons' : 'material-icons-outlined'"
+                matListItemIcon>{{ item.icon }}</mat-icon>
+                @if(!sideNavCollapsed()) {
+                    <span matListItemTitle>{{ item.label }}</span>
+                }
+            </a>
+        }
+    }
+</mat-nav-list>
