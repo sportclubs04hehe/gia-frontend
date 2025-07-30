@@ -63,7 +63,7 @@
 
   <mat-dialog-actions align="end">
     <button mat-button type="button" (click)="onCancel()">Hủy</button>
-    <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+    <button matButton="filled" mat-raised-button type="submit">
       {{isEditMode ? 'Cập nhật' : 'Thêm mới'}}
     </button>
   </mat-dialog-actions>

@@ -30,3 +30,18 @@
   width: 120px;
   text-align: center;
 }
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.selected-row {
+  background-color: rgba(0, 0, 0, 0.04);
+}
