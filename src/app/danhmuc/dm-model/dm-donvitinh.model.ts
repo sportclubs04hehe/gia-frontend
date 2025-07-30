@@ -24,3 +24,9 @@ export interface DmDonViTinhUpdateDto {
   ngayHieuLuc: Date;
   ngayHetHieuLuc: Date;
 }
+
+export interface DmDonViTinhImportDto {
+  ma: string;
+  ten: string;
+  ghiChu?: string;
+}

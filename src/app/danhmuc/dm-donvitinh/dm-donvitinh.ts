@@ -18,6 +18,7 @@ import { DmDonvitinh as DmDonvitinhService } from '../dm-service/dm-donvitinh/dm
 import { DmDonViTinhDto } from '../dm-model/dm-donvitinh.model';
 import { PagedRequest, PagedResult } from '../dm-model/page-result';
 import { DmDonvitinhDialogComponent } from './dm-donvitinh-dialog/dm-donvitinh-dialog';
+import { DmDonvitinhImport } from './dm-donvitinh-import/dm-donvitinh-import';
 
 @Component({
   selector: 'app-dm-donvitinh',
@@ -36,7 +37,7 @@ import { DmDonvitinhDialogComponent } from './dm-donvitinh-dialog/dm-donvitinh-d
     MatNativeDateModule,
     MatFormFieldModule,
     MatInputModule,
-    FormsModule
+    FormsModule,
   ],
   templateUrl: './dm-donvitinh.html',
   styleUrl: './dm-donvitinh.css'
@@ -46,13 +47,13 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
   dataSource = new MatTableDataSource<DmDonViTinhDto>([]);
   isLoading = false;
   selectedRow: DmDonViTinhDto | null = null;
-  
+
   // Phân trang
   totalCount = 0;
   pageSize = 10;
   pageNumber = 1;
   searchTerm = '';
-  
+
   // Sắp xếp
   sortBy = 'createdDate';
   sortDescending = true;
@@ -65,8 +66,8 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
     private donViTinhService: DmDonvitinhService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef  
-  ) {}
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.loadData();
@@ -97,19 +98,19 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
       sortBy: this.sortBy,
       sortDescending: this.sortDescending
     };
-    
+
     this.donViTinhService.getPaged(request).subscribe({
       next: (result: PagedResult<DmDonViTinhDto>) => {
         this.dataSource.data = result.items;
         this.totalCount = result.totalCount;
-        
+
         // Cập nhật paginator
         if (this.paginator) {
           this.paginator.length = this.totalCount;
           this.paginator.pageSize = result.pageSize;
           this.paginator.pageIndex = result.pageNumber - 1;
         }
-        
+
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -183,6 +184,20 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
       if (result) {
         this.loadData();
         this.selectedRow = null;
+      }
+    });
+  }
+
+  importExcel(): void {
+    const dialogRef = this.dialog.open(DmDonvitinhImport, {
+      width: '80%',
+      maxWidth: '1200px',
+      height: '90vh'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadData();
       }
     });
   }

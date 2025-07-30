@@ -8,10 +8,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { DmDonvitinh as DmDonvitinhService } from '../../dm-service/dm-donvitinh/dm-donvitinh.api';
 import { DmDonViTinhDto, DmDonViTinhCreateDto, DmDonViTinhUpdateDto } from '../../dm-model/dm-donvitinh.model';
-
+import { codeExistsDonViTinhValidator } from '../../../share/dm-validators/codeExistsDonViTinhValidator';
 @Component({
   selector: 'app-dm-donvitinh-dialog',
   standalone: true,
@@ -23,7 +24,8 @@ import { DmDonViTinhDto, DmDonViTinhCreateDto, DmDonViTinhUpdateDto } from '../.
     MatInputModule,
     MatButtonModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './dm-donvitinh-dialog.html',
   styleUrls: ['./dm-donvitinh-dialog.css']
@@ -32,6 +34,7 @@ export class DmDonvitinhDialogComponent implements OnInit {
   form: FormGroup;
   isEditMode: boolean;
   dialogTitle: string;
+  isCheckingCode = false;
 
   constructor(
     private fb: FormBuilder,
@@ -53,6 +56,17 @@ export class DmDonvitinhDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Thêm async validator cho trường mã
+    const excludeId = this.isEditMode ? this.data?.id : undefined;
+    this.form.get('ma')?.setAsyncValidators([
+      codeExistsDonViTinhValidator(this.donViTinhService, excludeId)
+    ]);
+
+    // Theo dõi trạng thái pending của field mã
+    this.form.get('ma')?.statusChanges.subscribe(status => {
+      this.isCheckingCode = status === 'PENDING';
+    });
+
     if (this.isEditMode && this.data) {
       this.form.patchValue({
         ma: this.data.ma,
@@ -65,7 +79,8 @@ export class DmDonvitinhDialogComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.isCheckingCode) {
+      this.markFormGroupTouched();
       return;
     }
 
@@ -105,6 +120,13 @@ export class DmDonvitinhDialogComponent implements OnInit {
     this.dialogRef.close();
   }
 
+  private markFormGroupTouched(): void {
+    Object.keys(this.form.controls).forEach(key => {
+      const control = this.form.get(key);
+      control?.markAsTouched();
+    });
+  }
+
   showNotification(message: string, type: 'success' | 'error'): void {
     this.snackBar.open(message, 'Đóng', {
       duration: 3000,
@@ -112,5 +134,10 @@ export class DmDonvitinhDialogComponent implements OnInit {
       verticalPosition: 'top',
       panelClass: type === 'success' ? ['success-snackbar'] : ['error-snackbar']
     });
+  }
+
+  // Getter để kiểm tra trạng thái form
+  get isFormValid(): boolean {
+    return this.form.valid && !this.isCheckingCode;
   }
 }

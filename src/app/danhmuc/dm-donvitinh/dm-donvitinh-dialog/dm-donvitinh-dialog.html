@@ -6,11 +6,18 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Mã đơn vị tính</mat-label>
         <input matInput formControlName="ma" placeholder="Nhập mã đơn vị tính">
+
+        <!-- Spinner khi đang kiểm tra -->
+        <mat-spinner matSuffix *ngIf="isCheckingCode" diameter="20"></mat-spinner>
+
         <mat-error *ngIf="form.controls['ma'].hasError('required')">
           Mã không được để trống
         </mat-error>
         <mat-error *ngIf="form.controls['ma'].hasError('maxlength')">
           Mã không được vượt quá 20 ký tự
+        </mat-error>
+        <mat-error *ngIf="form.controls['ma'].hasError('codeExists')">
+          Mã đơn vị tính đã tồn tại
         </mat-error>
       </mat-form-field>
     </div>

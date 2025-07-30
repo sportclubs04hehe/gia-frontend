@@ -11,6 +11,9 @@
       <button color="warn" mat-raised-button (click)="deleteSelected()" matTooltip="Xóa">
         <mat-icon>delete</mat-icon> Xóa
       </button>
+      <button mat-raised-button color="accent" (click)="importExcel()" matTooltip="Import từ Excel">
+        <mat-icon>upload_file</mat-icon> Import Excel
+      </button>
     </div>
   </div>
 
@@ -19,11 +22,8 @@
       <mat-spinner></mat-spinner>
     </div>
 
-    <table mat-table [dataSource]="dataSource" 
-           matSort 
-           (matSortChange)="onSortChange($event)"
-           class="full-width-table">
-      
+    <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSortChange($event)" class="full-width-table">
+
       <!-- Mã Column -->
       <ng-container matColumnDef="ma">
         <th mat-header-cell *matHeaderCellDef mat-sort-header="ma">Mã</th>
@@ -55,9 +55,8 @@
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
-          (click)="selectRow(row)"
-          [class.selected-row]="row === selectedRow"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row)"
+        [class.selected-row]="row === selectedRow"></tr>
 
       <!-- Hiển thị khi không có dữ liệu -->
       <tr class="mat-row" *matNoDataRow>
@@ -70,13 +69,8 @@
       </tr>
     </table>
 
-    <mat-paginator 
-      [length]="totalCount"
-      [pageSize]="pageSize"
-      [pageSizeOptions]="[5, 10, 25, 50, 100]"
-      (page)="onPageChange($event)"
-      aria-label="Chọn trang"
-      showFirstLastButtons>
+    <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 50, 100]"
+      (page)="onPageChange($event)" aria-label="Chọn trang" showFirstLastButtons>
     </mat-paginator>
   </div>
 </div>
