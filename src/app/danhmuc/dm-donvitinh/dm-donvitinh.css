@@ -45,3 +45,36 @@
 .selected-row {
   background-color: rgba(0, 0, 0, 0.04);
 }
+
+.highlighted-text {
+  background-color: #53a2f1 !important; /* Add !important */
+  color: #ffffff !important;
+  padding: 2px 4px;
+  font-weight: bold;
+  border-radius: 3px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.2);
+  display: inline-block;
+}
+
+/* Add global styles if needed */
+::ng-deep .highlighted-text {
+  background-color: #53a2f1 !important; /* Add !important */
+  color: #ffffff !important;
+  padding: 2px 4px;
+  font-weight: bold;
+  border-radius: 3px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.2);
+  display: inline-block;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.search-container .mat-form-field {
+  width: 100%;
+}

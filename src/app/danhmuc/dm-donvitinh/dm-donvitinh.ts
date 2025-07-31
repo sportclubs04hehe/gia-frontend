@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ChangeDetectorRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTable, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator, PageEvent } from '@angular/material/paginator';
@@ -13,12 +13,15 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import { DmDonvitinh as DmDonvitinhService } from '../dm-service/dm-donvitinh/dm-donvitinh.api';
 import { DmDonViTinhDto } from '../dm-model/dm-donvitinh.model';
 import { PagedRequest, PagedResult } from '../dm-model/page-result';
 import { DmDonvitinhDialogComponent } from './dm-donvitinh-dialog/dm-donvitinh-dialog';
 import { DmDonvitinhImport } from './dm-donvitinh-import/dm-donvitinh-import';
+import { TextHighlightPipe } from '../../share/pipes/TextHighlight.pipe';
 
 @Component({
   selector: 'app-dm-donvitinh',
@@ -38,11 +41,12 @@ import { DmDonvitinhImport } from './dm-donvitinh-import/dm-donvitinh-import';
     MatFormFieldModule,
     MatInputModule,
     FormsModule,
+    TextHighlightPipe
   ],
   templateUrl: './dm-donvitinh.html',
   styleUrl: './dm-donvitinh.css'
 })
-export class DmDonvitinh implements OnInit, AfterViewInit {
+export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
   displayedColumns: string[] = ['ma', 'ten', 'ghiChu', 'ngayHieuLuc', 'ngayHetHieuLuc'];
   dataSource = new MatTableDataSource<DmDonViTinhDto>([]);
   isLoading = false;
@@ -58,6 +62,10 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
   sortBy = 'createdDate';
   sortDescending = true;
 
+  private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
+  isSearching = false;
+
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatTable) table!: MatTable<DmDonViTinhDto>;
@@ -70,6 +78,17 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
   ) { }
 
   ngOnInit(): void {
+    // Initialize search with debounce
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(term => {
+      this.searchTerm = term;
+      this.pageNumber = 1; // Reset to first page on search
+      this.performSearch();
+    });
+    
     this.loadData();
   }
 
@@ -85,6 +104,11 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
       this.sort.active = this.sortBy;
       this.sort.direction = this.sortDescending ? 'desc' : 'asc';
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadData(): void {
@@ -229,5 +253,44 @@ export class DmDonvitinh implements OnInit, AfterViewInit {
 
   selectRow(row: DmDonViTinhDto): void {
     this.selectedRow = this.selectedRow === row ? null : row;
+  }
+
+  // Add method to handle direct search input
+  onSearchInput(): void {
+    this.searchSubject.next(this.searchTerm);
+  }
+
+  // Add method to handle search button click
+  onSearch(): void {
+    this.performSearch();
+  }
+
+  // Implement performSearch method
+  performSearch(): void {
+    if (!this.searchTerm || !this.searchTerm.trim()) {
+      this.loadData(); // Fall back to regular paginated data
+      return;
+    }
+    
+    this.isSearching = true;
+    this.isLoading = true;
+    this.cdr.detectChanges();
+    
+    this.donViTinhService.search(this.searchTerm).subscribe({
+      next: (results) => {
+        this.dataSource.data = results;
+        this.totalCount = results.length;
+        this.isSearching = false;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error searching:', error);
+        this.showNotification('Lỗi khi tìm kiếm dữ liệu', 'error');
+        this.isSearching = false;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

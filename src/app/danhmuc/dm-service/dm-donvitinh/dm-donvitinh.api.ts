@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../../environments/environment.development';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, tap, shareReplay, map } from 'rxjs/operators';
+import { catchError, tap} from 'rxjs/operators';
 import { DmDonViTinhDto, DmDonViTinhCreateDto, DmDonViTinhUpdateDto } from '../../dm-model/dm-donvitinh.model';
 import { PagedRequest, PagedResult } from '../../dm-model/page-result';
 import { ImportResultDto } from '../../dm-model/import-model';
@@ -21,6 +21,10 @@ export class DmDonvitinh {
   private cacheLifetime = 5 * 60 * 1000; // 5 minutes cache lifetime
   private cacheRefreshSubject = new BehaviorSubject<boolean>(true);
   
+  // Additional properties for search caching
+  private searchCache: { [term: string]: { data: DmDonViTinhDto[], timestamp: number } } = {};
+  private maxSearchCacheEntries = 15; // Limit search cache size to prevent memory issues
+
   // Generate a cache key from request parameters
   private createCacheKey(request: PagedRequest): string {
     return `page=${request.pageNumber}_size=${request.pageSize}_sort=${request.sortBy || ''}_desc=${request.sortDescending || false}`;
@@ -71,10 +75,71 @@ export class DmDonvitinh {
       );
   }
 
+  // Add this new method for direct searching
+  search(searchTerm: string): Observable<DmDonViTinhDto[]> {
+    if (!searchTerm || !searchTerm.trim()) {
+      return of([]);
+    }
+
+    const normalizedTerm = searchTerm.toLowerCase().trim();
+    
+    // Check cache first
+    if (this.isSearchCacheValid(normalizedTerm)) {
+      console.log('Returning cached search results for:', normalizedTerm);
+      return of(this.searchCache[normalizedTerm].data);
+    }
+
+    // Otherwise make API call
+    return this.http.get<DmDonViTinhDto[]>(`${this.endpoint}/search`, {
+      params: new HttpParams().set('searchTerm', searchTerm)
+    }).pipe(
+      tap(results => {
+        this.storeSearchInCache(normalizedTerm, results);
+      }),
+      catchError(error => {
+        console.error('Search error:', error);
+        return of([]);
+      })
+    );
+  }
+
+  private isSearchCacheValid(term: string): boolean {
+    if (!this.searchCache[term]) return false;
+    const now = new Date().getTime();
+    return now - this.searchCache[term].timestamp < this.cacheLifetime;
+  }
+
+  private storeSearchInCache(term: string, data: DmDonViTinhDto[]): void {
+    // Manage cache size - if exceeds max entries, remove oldest entry
+    const cacheKeys = Object.keys(this.searchCache);
+    if (cacheKeys.length >= this.maxSearchCacheEntries) {
+      let oldestKey = cacheKeys[0];
+      let oldestTime = this.searchCache[oldestKey].timestamp;
+      
+      // Find oldest entry
+      for (const key of cacheKeys) {
+        if (this.searchCache[key].timestamp < oldestTime) {
+          oldestKey = key;
+          oldestTime = this.searchCache[key].timestamp;
+        }
+      }
+      
+      // Remove oldest entry
+      delete this.searchCache[oldestKey];
+    }
+    
+    // Store new data
+    this.searchCache[term] = {
+      data: data,
+      timestamp: new Date().getTime()
+    };
+  }
+
   // Clear cache on data modifications
   clearCache(): void {
-    console.log('Clearing pagination cache');
+    console.log('Clearing all caches');
     this.cache = {};
+    this.searchCache = {};
     this.cacheRefreshSubject.next(true);
   }
 
