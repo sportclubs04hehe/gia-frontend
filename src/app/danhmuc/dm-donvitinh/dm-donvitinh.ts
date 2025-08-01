@@ -88,7 +88,7 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
       this.pageNumber = 1; // Reset to first page on search
       this.performSearch();
     });
-    
+
     this.loadData();
   }
 
@@ -271,11 +271,11 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
       this.loadData(); // Fall back to regular paginated data
       return;
     }
-    
+
     this.isSearching = true;
     this.isLoading = true;
     this.cdr.detectChanges();
-    
+
     this.donViTinhService.search(this.searchTerm).subscribe({
       next: (results) => {
         this.dataSource.data = results;

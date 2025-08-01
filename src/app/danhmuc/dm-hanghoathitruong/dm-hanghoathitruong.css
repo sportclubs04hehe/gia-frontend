@@ -1,0 +1,445 @@
+.container {
+  padding: 24px;
+  background-color: #eeecec;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+}
+
+.header-container {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.title-wrapper h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+}
+
+.controls-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.search-container {
+  width: 350px;
+  min-width: 250px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-actions .mat-mdc-raised-button {
+  min-width: auto;
+  padding: 0 12px;
+  line-height: 36px;
+  border-radius: 8px;
+}
+
+.header-actions .mat-icon {
+  margin-right: 6px;
+}
+
+.search-container .search-field {
+  width: 100%;
+}
+
+.search-container .mat-mdc-form-field .mat-mdc-floating-label {
+  top: 14px !important;
+}
+
+.search-container .mat-mdc-form-field {
+  padding: 4px 6px;
+}
+
+::ng-deep .search-container .mat-mdc-form-field .mdc-notched-outline {
+  border-radius: 40px !important;
+}
+
+::ng-deep .search-container .mat-mdc-form-field .mdc-notched-outline .mdc-notched-outline__leading {
+  border-radius: 40px 0 0 40px !important;
+  width: 40px !important;
+}
+
+::ng-deep .search-container .mat-mdc-form-field .mdc-notched-outline .mdc-notched-outline__trailing {
+  border-radius: 0 40px 40px 0 !important;
+}
+
+::ng-deep .search-container .mat-mdc-form-field {
+  height: 48px !important;
+}
+
+::ng-deep .search-container .mat-mdc-form-field .mat-mdc-floating-label {
+  top: 50% !important;
+}
+
+::ng-deep .search-container .mat-mdc-form-field .mat-mdc-text-field-wrapper {
+  height: 48px !important;
+}
+
+::ng-deep .search-container .mat-mdc-form-field .mat-mdc-form-field-flex {
+  height: 48px !important;
+  align-items: center !important;
+}
+
+.table-wrapper {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.loading-shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-scroll {
+  overflow: auto;
+  flex-grow: 1;
+  max-height: calc(100vh - 300px);
+}
+
+.full-width-table {
+  width: 100%;
+}
+
+/* Tối ưu hiển thị nhiều bản ghi */
+.mat-mdc-row, .mat-mdc-header-row {
+  min-height: 40px !important;
+  height: 40px !important;
+}
+
+.mat-mdc-cell, .mat-mdc-header-cell {
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Giới hạn chiều rộng cho từng cột */
+.mat-column-maHangHoa {
+  max-width: 200px !important;
+  width: 200px !important;
+}
+
+.mat-column-tenHangHoa {
+  max-width: 200px !important;
+  width: 200px !important;
+}
+
+.mat-column-nhomHangHoa {
+  max-width: 150px !important;
+  width: 150px !important;
+}
+
+.mat-column-xuatXu {
+  max-width: 120px !important;
+  width: 120px !important;
+}
+
+.mat-column-giaThiTruong,
+.mat-column-giaTruocDo {
+  max-width: 130px !important;
+  width: 130px !important;
+  text-align: right !important;
+}
+
+.mat-column-ghiChu {
+  max-width: 200px !important;
+  width: 200px !important;
+}
+
+/* Tree structure styles for inline display */
+.ma-hanghoa-cell {
+  padding: 8px 4px !important;
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.expand-button-inline {
+  width: 20px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  min-width: unset !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.expand-button-inline .mat-icon {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  line-height: 16px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.leaf-spacer-inline {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+}
+
+.ma-hanghoa-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2 !important;
+  display: flex;
+  align-items: center;
+}
+
+/* Tree level styling */
+.tree-level-0 {
+  background-color: #f8f9fa !important;
+  font-weight: 600 !important;
+}
+
+.tree-level-1 {
+  background-color: #f1f3f4 !important;
+  font-weight: 500 !important;
+}
+
+.tree-level-2 {
+  background-color: #ffffff !important;
+  font-weight: 400 !important;
+}
+
+/* Price styling */
+.price-cell {
+  text-align: right !important;
+  font-weight: 500 !important;
+}
+
+.price-up {
+  color: #10B981 !important;
+}
+
+.price-down {
+  color: #EF4444 !important;
+}
+
+.price-same {
+  color: #6B7280 !important;
+}
+
+.no-price {
+  color: #9CA3AF !important;
+  font-style: italic;
+}
+
+.price-icon {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-left: 4px !important;
+  vertical-align: middle !important;
+}
+
+.mat-mdc-header-cell {
+  background-color: #eef2f6;
+  font-weight: 500;
+  color: #333;
+}
+
+.mat-mdc-row:hover {
+  background-color: #f0f4f8;
+  cursor: pointer;
+}
+
+.selected-row {
+  background-color: #d9eaff !important;
+  font-weight: 500;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.no-data-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #757575;
+  font-style: italic;
+}
+
+.no-data-message .mat-icon {
+  margin-right: 8px;
+}
+
+/* Tooltip hover để xem full text */
+.mat-mdc-cell[title] {
+  cursor: help;
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: #316596 !important;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.btn-primary:hover {
+  background-color: #173f62 !important;
+}
+
+.btn-secondary {
+  background-color: #d3d8d6 !important;
+  color: white;
+}
+.btn-secondary:hover {
+  background-color: rgb(199, 199, 199);
+}
+
+.btn-warning {
+  background-color: #EF4444 !important;
+  color: white;
+}
+.btn-warning:hover {
+  background-color: #e61c1c !important;
+}
+
+.btn-accent {
+  background-color: #3dc76f !important;
+  color: white;
+}
+
+.btn-accent:hover {
+  background-color: #1e9f4c !important;
+}
+
+/* Paginator styles */
+.mat-mdc-paginator {
+  padding: 8px 16px;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  border-radius: 0 0 8px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Paginate buttons (prev/next/first/last) */
+.mat-mdc-paginator-outer-container .mat-mdc-paginator-navigation-previous,
+.mat-mdc-paginator-outer-container .mat-mdc-paginator-navigation-next,
+.mat-mdc-paginator-outer-container .mat-mdc-paginator-navigation-first,
+.mat-mdc-paginator-outer-container .mat-mdc-paginator-navigation-last {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  margin: 0 2px;
+  transition: background-color 0.2s ease;
+}
+
+.mat-mdc-paginator-outer-container button.mat-mdc-button {
+  background: transparent;
+  color: #374151;
+}
+
+.mat-mdc-paginator-outer-container button.mat-mdc-button:hover {
+  background-color: rgba(49, 101, 150, 0.08);
+}
+
+/* Active/current page indicator */
+.mat-mdc-paginator-range-label {
+  margin: 0 8px;
+  font-weight: 500;
+}
+
+/* Page size selector */
+.mat-mdc-paginator-page-size {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mat-mdc-form-field-infix .mat-mdc-form-field-flex {
+  min-height: 32px;
+}
+
+/* Dropdown (page size) nhỏ gọn */
+.mat-mdc-select .mat-mdc-select-trigger {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+/* Bo tròn nút Items per page */
+::ng-deep .mat-mdc-paginator .mat-mdc-form-field {
+  border-radius: 16px !important;
+}
+
+::ng-deep .mat-mdc-paginator .mat-mdc-form-field .mdc-notched-outline {
+  border-radius: 16px !important;
+}
+
+::ng-deep .mat-mdc-paginator .mat-mdc-form-field .mdc-notched-outline .mdc-notched-outline__leading {
+  border-radius: 16px 0 0 16px !important;
+  width: 16px !important;
+}
+
+::ng-deep .mat-mdc-paginator .mat-mdc-form-field .mdc-notched-outline .mdc-notched-outline__trailing {
+  border-radius: 0 16px 16px 0 !important;
+}
+
+::ng-deep .mat-mdc-paginator .mat-mdc-select .mat-mdc-select-trigger {
+  border-radius: 16px !important;
+}
+
+/* Disabled buttons mờ đi */
+.mat-mdc-paginator-outer-container button.mat-mdc-button[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Responsive: bó hẹp ở màn nhỏ */
+@media (max-width: 800px) {
+  .mat-mdc-paginator {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
