@@ -127,6 +127,58 @@
   width: 100%;
 }
 
+/* Tối ưu hiển thị nhiều bản ghi */
+.mat-mdc-row, .mat-mdc-header-row {
+  min-height: 40px !important;
+  height: 40px !important;
+}
+
+.mat-mdc-cell, .mat-mdc-header-cell {
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+}
+
+/* Giới hạn chiều rộng và xử lý text overflow cho từng cột */
+.mat-column-ma {
+  max-width: 120px !important;
+  width: 120px !important;
+}
+
+.mat-column-ten {
+  max-width: 200px !important;
+  width: 200px !important;
+}
+
+.mat-column-ghiChu {
+  max-width: 250px !important;
+  width: 250px !important;
+}
+
+.mat-column-ngayHieuLuc,
+.mat-column-ngayHetHieuLuc {
+  max-width: 130px !important;
+  width: 130px !important;
+}
+
+/* Text overflow cho tất cả các cell */
+.mat-mdc-cell, .mat-mdc-header-cell {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Tooltip hover để xem full text */
+.mat-mdc-cell[title] {
+  cursor: help;
+}
+
+/* Responsive cho bảng lớn */
+.table-scroll {
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+}
+
 .mat-mdc-header-cell {
   background-color: #eef2f6;
   font-weight: 500;
