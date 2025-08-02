@@ -54,7 +54,7 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
 
   // Phân trang
   totalCount = 0;
-  pageSize = 10;
+  pageSize = 50;
   pageNumber = 1;
   searchTerm = '';
 
@@ -65,6 +65,9 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
   isSearching = false;
+  
+  // Chế độ tìm kiếm
+  isInSearchMode = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -151,7 +154,13 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
   onPageChange(event: PageEvent): void {
     this.pageNumber = event.pageIndex + 1;
     this.pageSize = event.pageSize;
-    this.loadData();
+    
+    // sử dụng chế độ tìm kiếm nếu đang có searchTerm
+    if (this.searchTerm && this.searchTerm.trim()) {
+      this.performSearch(false); // false: không reset trang
+    } else {
+      this.loadData();
+    }
   }
 
   // Xử lý sự kiện sắp xếp
@@ -160,7 +169,13 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
       this.sortBy = this.mapSortColumn(sort.active);
       this.sortDescending = sort.direction === 'desc';
       this.pageNumber = 1; // Reset về trang đầu khi sắp xếp
-      this.loadData();
+      
+      // Sử dụng chế độ tìm kiếm nếu đang tìm kiếm
+      if (this.isInSearchMode && this.searchTerm) {
+        this.performSearch(true);
+      } else {
+        this.loadData();
+      }
     }
   }
 
@@ -179,6 +194,7 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
   clearSearch(): void {
     this.searchTerm = '';
     this.pageNumber = 1;
+    this.isInSearchMode = false; // Tắt chế độ tìm kiếm
     this.loadData();
   }
 
@@ -262,32 +278,46 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
 
   // Add method to handle search button click
   onSearch(): void {
-    this.performSearch();
+    this.performSearch(true); // true: reset về trang 1
   }
 
-  // Implement performSearch method
-  performSearch(): void {
+  // Update performSearch method
+  performSearch(resetToFirstPage: boolean = true): void {
     if (!this.searchTerm || !this.searchTerm.trim()) {
+      this.isInSearchMode = false;
       this.loadData(); // Fall back to regular paginated data
       return;
     }
 
-    this.isSearching = true;
+    if (resetToFirstPage) {
+      this.pageNumber = 1;
+    }
+
+    this.isInSearchMode = true;
     this.isLoading = true;
     this.cdr.detectChanges();
 
-    this.donViTinhService.search(this.searchTerm).subscribe({
-      next: (results) => {
-        this.dataSource.data = results;
-        this.totalCount = results.length;
-        this.isSearching = false;
+    // Log để debug
+    console.log(`Searching for "${this.searchTerm}" on page ${this.pageNumber}`);
+
+    this.donViTinhService.search(this.searchTerm, this.pageNumber, this.pageSize).subscribe({
+      next: (result) => {
+        this.dataSource.data = result.items;
+        this.totalCount = result.totalCount;
+        
+        // Update paginator
+        if (this.paginator) {
+          this.paginator.length = this.totalCount;
+          this.paginator.pageSize = result.pageSize;
+          this.paginator.pageIndex = result.pageNumber - 1;
+        }
+        
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error searching:', error);
         this.showNotification('Lỗi khi tìm kiếm dữ liệu', 'error');
-        this.isSearching = false;
         this.isLoading = false;
         this.cdr.detectChanges();
       }

@@ -22,8 +22,9 @@ export class DmDonvitinh {
   private cacheRefreshSubject = new BehaviorSubject<boolean>(true);
   
   // Additional properties for search caching
-  private searchCache: { [term: string]: { data: DmDonViTinhDto[], timestamp: number } } = {};
-  private maxSearchCacheEntries = 15; // Limit search cache size to prevent memory issues
+  private searchCache: { [cacheKey: string]: { data: PagedResult<DmDonViTinhDto>, timestamp: number } } = {};
+  private maxSearchCacheEntries = 20; // Giới hạn số lượng cache entries
+  private lastSearchTerm: string | null = null;
 
   // Generate a cache key from request parameters
   private createCacheKey(request: PagedRequest): string {
@@ -75,61 +76,91 @@ export class DmDonvitinh {
       );
   }
 
-  // Add this new method for direct searching
-  search(searchTerm: string): Observable<DmDonViTinhDto[]> {
+  // Update this method for direct searching
+  search(searchTerm: string, pageNumber: number = 1, pageSize: number = 50): Observable<PagedResult<DmDonViTinhDto>> {
     if (!searchTerm || !searchTerm.trim()) {
-      return of([]);
+      return of({
+        items: [],
+        totalCount: 0,
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+        totalPages: 0,
+        hasPreviousPage: false,
+        hasNextPage: false
+      });
     }
 
     const normalizedTerm = searchTerm.toLowerCase().trim();
     
+    // Clear cache if search term changed
+    if (this.lastSearchTerm !== null && this.lastSearchTerm !== normalizedTerm) {
+      console.log('Search term changed, clearing search cache');
+      this.searchCache = {};
+    }
+    this.lastSearchTerm = normalizedTerm;
+    
+    // Create cache key with pagination info
+    const cacheKey = `${normalizedTerm}_page${pageNumber}_size${pageSize}`;
+    
     // Check cache first
-    if (this.isSearchCacheValid(normalizedTerm)) {
-      console.log('Returning cached search results for:', normalizedTerm);
-      return of(this.searchCache[normalizedTerm].data);
+    if (this.isSearchCacheValid(cacheKey)) {
+      console.log('Returning cached search results for:', cacheKey);
+      return of(this.searchCache[cacheKey].data);
     }
 
     // Otherwise make API call
-    return this.http.get<DmDonViTinhDto[]>(`${this.endpoint}/search`, {
-      params: new HttpParams().set('searchTerm', searchTerm)
+    return this.http.get<PagedResult<DmDonViTinhDto>>(`${this.endpoint}/search`, {
+      params: new HttpParams()
+        .set('searchTerm', searchTerm)
+        .set('pageNumber', pageNumber.toString())
+        .set('pageSize', pageSize.toString())
     }).pipe(
       tap(results => {
-        this.storeSearchInCache(normalizedTerm, results);
+        this.storeSearchInCache(cacheKey, results);
       }),
       catchError(error => {
         console.error('Search error:', error);
-        return of([]);
+        return of({
+          items: [],
+          totalCount: 0,
+          pageNumber: pageNumber,
+          pageSize: pageSize,
+          totalPages: 0,
+          hasPreviousPage: false,
+          hasNextPage: false
+        });
       })
     );
   }
 
-  private isSearchCacheValid(term: string): boolean {
-    if (!this.searchCache[term]) return false;
+  private isSearchCacheValid(cacheKey: string): boolean {
+    if (!this.searchCache[cacheKey]) return false;
     const now = new Date().getTime();
-    return now - this.searchCache[term].timestamp < this.cacheLifetime;
+    const cacheLifetime = 7 * 60 * 1000; // 7 phút cache lifetime cho search
+    return now - this.searchCache[cacheKey].timestamp < cacheLifetime;
   }
 
-  private storeSearchInCache(term: string, data: DmDonViTinhDto[]): void {
-    // Manage cache size - if exceeds max entries, remove oldest entry
+  private storeSearchInCache(cacheKey: string, data: PagedResult<DmDonViTinhDto>): void {
+    // Manage cache size - if exceeds max entries, remove oldest entries
     const cacheKeys = Object.keys(this.searchCache);
     if (cacheKeys.length >= this.maxSearchCacheEntries) {
-      let oldestKey = cacheKeys[0];
-      let oldestTime = this.searchCache[oldestKey].timestamp;
+      // Sort by timestamp (oldest first)
+      const sortedKeys = cacheKeys.sort((a, b) => 
+        this.searchCache[a].timestamp - this.searchCache[b].timestamp
+      );
       
-      // Find oldest entry
-      for (const key of cacheKeys) {
-        if (this.searchCache[key].timestamp < oldestTime) {
-          oldestKey = key;
-          oldestTime = this.searchCache[key].timestamp;
+      // Remove oldest 20% of entries to prevent frequent cleaning
+      const removeCount = Math.ceil(this.maxSearchCacheEntries * 0.2);
+      for (let i = 0; i < removeCount; i++) {
+        if (sortedKeys[i]) {
+          delete this.searchCache[sortedKeys[i]];
+          console.log('Removed old search cache entry:', sortedKeys[i]);
         }
       }
-      
-      // Remove oldest entry
-      delete this.searchCache[oldestKey];
     }
     
     // Store new data
-    this.searchCache[term] = {
+    this.searchCache[cacheKey] = {
       data: data,
       timestamp: new Date().getTime()
     };
@@ -140,6 +171,7 @@ export class DmDonvitinh {
     console.log('Clearing all caches');
     this.cache = {};
     this.searchCache = {};
+    this.lastSearchTerm = null;
     this.cacheRefreshSubject.next(true);
   }
 
