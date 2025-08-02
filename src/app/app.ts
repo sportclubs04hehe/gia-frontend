@@ -25,4 +25,9 @@ export class App {
   collapsed = signal(false);
 
   sidenavWidth = computed(() => this.collapsed() ? '65px' : '250px');
+
+  // Method to handle menu toggle request from sidenav
+  onMenuToggleRequested(shouldCollapse: boolean) {
+    this.collapsed.set(shouldCollapse);
+  }
 }

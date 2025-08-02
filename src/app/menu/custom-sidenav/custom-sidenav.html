@@ -10,26 +10,35 @@
     @for(item of menuItems(); track item.label) {
         @if(item.children && item.children.length > 0) {
             <!-- Menu item với dropdown -->
-            <mat-expansion-panel class="menu-expansion-panel" [disabled]="sideNavCollapsed()">
-                <mat-expansion-panel-header class="menu-item">
-                    <mat-panel-title>
-                        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-                        @if(!sideNavCollapsed()) {
+            @if(sideNavCollapsed()) {
+                <!-- Khi collapsed, hiển thị chỉ icon và có thể click -->
+                <div class="collapsed-menu-item" (click)="onMenuItemClick(item, $event)">
+                    <mat-icon class="collapsed-icon" [matTooltip]="item.label" matTooltipPosition="right">{{ item.icon }}</mat-icon>
+                </div>
+            } @else {
+                <!-- Khi expanded, hiển thị expansion panel -->
+                <mat-expansion-panel
+                    class="menu-expansion-panel"
+                    [class.has-active-child]="hasActiveChild(item)"
+                    [expanded]="isPanelExpanded(item.label) || hasActiveChild(item)"
+                    (expandedChange)="onPanelExpandedChange(item.label, $event)">
+                    <mat-expansion-panel-header class="menu-item">
+                        <mat-panel-title>
+                            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
                             <span class="menu-label">{{ item.label }}</span>
-                        }
-                    </mat-panel-title>
-                </mat-expansion-panel-header>
-                
-                @if(!sideNavCollapsed()) {
+                        </mat-panel-title>
+                    </mat-expansion-panel-header>
+
                     <div class="submenu-container">
                         @for(child of item.children; track child.label) {
-                            <a 
-                            mat-list-item 
+                            <a
+                            mat-list-item
                             class="submenu-item"
                             [routerLink]="child.route"
                             routerLinkActive="selected-menu-item"
                             #rla="routerLinkActive"
-                            [activated]="rla.isActive">
+                            [activated]="rla.isActive"
+                            (click)="onSubmenuClick(item.label)">
                                 <mat-icon
                                 [fontSet]="rla.isActive ? 'material-icons' : 'material-icons-outlined'"
                                 matListItemIcon>{{ child.icon }}</mat-icon>
@@ -37,12 +46,12 @@
                             </a>
                         }
                     </div>
-                }
-            </mat-expansion-panel>
+                </mat-expansion-panel>
+            }
         } @else {
             <!-- Menu item thông thường -->
-            <a 
-            mat-list-item 
+            <a
+            mat-list-item
             class="menu-item"
             [routerLink]="item.route"
             routerLinkActive="selected-menu-item"
