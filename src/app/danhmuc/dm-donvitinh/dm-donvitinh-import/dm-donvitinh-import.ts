@@ -208,21 +208,16 @@ export class DmDonvitinhImport implements OnInit {
     
     this.donViTinhService.importFromExcel(this.selectedFile).subscribe({
       next: (result: ImportResultDto) => {
-        console.log('Import result:', result); // Thêm log để debug
-        this.importResult = result;
-        
         // Đánh dấu các dòng lỗi trong bảng
         if (result.errors && result.errors.length > 0) {
           const updatedData = [...this.dataSource.data];
           
           result.errors.forEach(error => {
-            // Tìm dòng tương ứng trong dataSource (trừ đi 2 do row từ Excel bắt đầu từ 1 và có header)
             const rowIndex = error.row - 2;
             if (rowIndex >= 0 && rowIndex < updatedData.length) {
               updatedData[rowIndex].hasError = true;
               updatedData[rowIndex].errorMessage = error.message;
               
-              // Nếu có lỗi cụ thể cho từng cột
               if (error.columnErrors) {
                 const columnErrors = Object.values(error.columnErrors).join(', ');
                 updatedData[rowIndex].errorMessage = columnErrors;
@@ -233,11 +228,11 @@ export class DmDonvitinhImport implements OnInit {
           this.dataSource.data = updatedData;
         }
         
-        // Chuyển sang bước kết quả - đảm bảo thay đổi được phát hiện
+        // Di chuyển TẤT CẢ các cập nhật trạng thái vào setTimeout
         setTimeout(() => {
+          this.importResult = result; // Đặt importResult ở đây
           this.currentStep = 2;
           this.isLoading = false;
-          this.cdr.detectChanges();
           
           // Hiển thị thông báo tổng quan
           if (result.successCount > 0) {
@@ -245,6 +240,9 @@ export class DmDonvitinhImport implements OnInit {
           } else {
             this.showNotification(`Import thất bại. ${result.errorCount} lỗi`, 'error');
           }
+          
+          // Gọi detectChanges sau khi mọi thay đổi đã hoàn tất
+          this.cdr.detectChanges();
         }, 100);
       },
       error: (error) => {
@@ -272,6 +270,7 @@ export class DmDonvitinhImport implements OnInit {
    * Hoàn thành quá trình import và đóng dialog
    */
   complete(): void {
+    this.donViTinhService.clearCache();
     this.dialogRef.close(true);
   }
 

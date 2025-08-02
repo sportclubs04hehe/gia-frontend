@@ -117,7 +117,7 @@
             <mat-step>
                 <ng-template matStepLabel>Kết quả</ng-template>
                 <div class="step-content">
-                    <div class="result-container" *ngIf="importResult">
+                    <div class="result-container" *ngIf="importResult && currentStep === 2">
                         <h3>Kết quả Import</h3>
 
                         <div class="result-summary">

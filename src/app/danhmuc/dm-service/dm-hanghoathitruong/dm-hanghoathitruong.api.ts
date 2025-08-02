@@ -15,7 +15,7 @@ export class DmHangHoaThiTruongService {
       id: '1',
       macha: undefined,
       maHangHoa: 'TP001',
-      tenHangHoa: 'Thực phẩm',
+      tenHangHoa: 'Thực phẩm ',
       nhomHangHoa: 'Nhóm chính',
       xuatXu: 'Việt Nam',
       giaThiTruong: 0,
