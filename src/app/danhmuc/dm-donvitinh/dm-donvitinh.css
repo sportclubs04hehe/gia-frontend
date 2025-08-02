@@ -339,6 +339,27 @@
   cursor: not-allowed;
 }
 
+/* Text Highlight Styles for Search Results */
+::ng-deep .highlighted-text {
+  background-color: #ffeb3b !important;
+  color: #000 !important;
+  font-weight: 600 !important;
+  padding: 1px 2px !important;
+  border-radius: 2px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  display: inline !important;
+}
+
+/* Alternative highlight style for better contrast */
+::ng-deep .mat-cell .highlighted-text {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+  font-weight: 700 !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+  box-shadow: 0 1px 3px rgba(255, 193, 7, 0.3) !important;
+}
+
 /* Responsive: bó hẹp ở màn nhỏ */
 @media (max-width: 800px) {
   .mat-mdc-paginator {

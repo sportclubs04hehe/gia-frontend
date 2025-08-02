@@ -13,37 +13,37 @@ export class TextHighlightPipe implements PipeTransform {
     if (!text || !searchTerm || searchTerm.trim() === '') {
       return this.sanitizer.bypassSecurityTrustHtml(text || '');
     }
-    
-    // Normalize text and search term for Vietnamese characters
-    const normalizedText = this.normalizeVietnamese(text);
-    const normalizedSearchTerm = this.normalizeVietnamese(searchTerm.trim());
-    
-    // Escape special regex characters
-    const searchTermEscaped = normalizedSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    
-    // Create regex with case-insensitive flag and word boundary
-    const regex = new RegExp(`(${searchTermEscaped})`, 'gi');
-    
-    // Find matches in normalized text
-    const matches = normalizedText.match(regex);
-    
-    if (!matches) {
+
+    const cleanSearchTerm = searchTerm.trim();
+
+    // Tạo regex để tìm kiếm không phân biệt hoa thường và có dấu
+    const searchRegex = this.createVietnameseSearchRegex(cleanSearchTerm);
+
+    if (!searchRegex) {
       return this.sanitizer.bypassSecurityTrustHtml(text);
     }
-    
-    // Replace matches with highlighted span
+
+    // Tìm tất cả matches trong text gốc
+    const matches = text.match(searchRegex);
+
+    if (!matches || matches.length === 0) {
+      return this.sanitizer.bypassSecurityTrustHtml(text);
+    }
+
+    // Highlight các matches
     let highlightedText = text;
-    
-    // Sort matches by length (longest first) to avoid nested replacements
+
+    // Sắp xếp matches theo độ dài giảm dần để tránh conflict
     const uniqueMatches = [...new Set(matches)].sort((a, b) => b.length - a.length);
-    
+
     uniqueMatches.forEach(match => {
-      const matchRegex = new RegExp(`(${this.escapeRegex(match)})`, 'gi');
-      highlightedText = highlightedText.replace(matchRegex, 
+      const escapedMatch = this.escapeRegex(match);
+      const replaceRegex = new RegExp(`(${escapedMatch})`, 'gi');
+      highlightedText = highlightedText.replace(replaceRegex,
         '<span class="highlighted-text">$1</span>'
       );
     });
-    
+
     return this.sanitizer.bypassSecurityTrustHtml(highlightedText);
   }
 
@@ -51,6 +51,53 @@ export class TextHighlightPipe implements PipeTransform {
     return text.normalize('NFD')
                .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
                .toLowerCase();
+  }
+
+  private createVietnameseSearchRegex(searchTerm: string): RegExp | null {
+    if (!searchTerm) return null;
+
+    // Tạo pattern có thể match cả có dấu và không dấu
+    let pattern = '';
+
+    for (let i = 0; i < searchTerm.length; i++) {
+      const char = searchTerm[i];
+      const normalizedChar = this.normalizeVietnamese(char);
+
+      // Nếu là ký tự tiếng Việt, tạo character class cho cả có dấu và không dấu
+      if (this.isVietnameseChar(char)) {
+        const variations = this.getVietnameseCharVariations(normalizedChar);
+        pattern += `[${variations}]`;
+      } else {
+        // Escape special regex characters
+        pattern += this.escapeRegex(char);
+      }
+    }
+
+    try {
+      return new RegExp(pattern, 'gi');
+    } catch (e) {
+      console.warn('Invalid regex pattern:', pattern, e);
+      return null;
+    }
+  }
+
+  private isVietnameseChar(char: string): boolean {
+    const vietnameseChars = /[aàáạảãâầấậẩẫăằắặẳẵeèéẹẻẽêềếệểễiìíịỉĩoòóọỏõôồốộổỗơờớợởỡuùúụủũưừứựửữyỳýỵỷỹđAÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴEÈÉẸẺẼÊỀẾỆỂỄIÌÍỊỈĨOÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠUÙÚỤỦŨƯỪỨỰỬỮYỲÝỴỶỸĐ]/;
+    return vietnameseChars.test(char);
+  }
+
+  private getVietnameseCharVariations(normalizedChar: string): string {
+    const variations: { [key: string]: string } = {
+      'a': 'aàáạảãâầấậẩẫăằắặẳẵAÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴ',
+      'e': 'eèéẹẻẽêềếệểễEÈÉẸẺẼÊỀẾỆỂỄ',
+      'i': 'iìíịỉĩIÌÍỊỈĨ',
+      'o': 'oòóọỏõôồốộổỗơờớợởỡOÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ',
+      'u': 'uùúụủũưừứựửữUÙÚỤỦŨƯỪỨỰỬỮ',
+      'y': 'yỳýỵỷỹYỲÝỴỶỸ',
+      'd': 'dđDĐ'
+    };
+
+    return variations[normalizedChar] || normalizedChar;
   }
 
   private escapeRegex(text: string): string {

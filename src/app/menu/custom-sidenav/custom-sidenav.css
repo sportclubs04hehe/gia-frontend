@@ -46,27 +46,57 @@
 
 .menu-expansion-panel {
     box-shadow: none !important;
-    
+
     .mat-expansion-panel-header {
         padding: 0 16px;
         height: 48px;
         border-left: 5px solid;
         border-left-color: rgba(0, 0, 0, 0);
-        
+
         &:hover {
             background: rgba(0, 0, 0, 0.04);
         }
-        
+
         .mat-content {
             align-items: center;
         }
-        
+
         .menu-label {
             margin-left: 16px;
         }
     }
-    
+
     .mat-expansion-panel-body {
         padding: 0;
+    }
+
+    /* Style cho expansion panel khi có active child */
+    &.has-active-child .mat-expansion-panel-header {
+        border-left-color: rgb(128, 128, 128);
+        background: rgba(0, 0, 0, 0.02);
+    }
+}/* Collapsed menu item styles */
+.collapsed-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    padding: 0 16px;
+    cursor: pointer;
+    border-left: 5px solid rgba(0, 0, 0, 0);
+    transition: all 200ms ease-in-out;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.04);
+        border-left-color: rgb(128, 128, 128);
+    }
+
+    .collapsed-icon {
+        color: rgba(0, 0, 0, 0.54);
+        transition: color 200ms ease-in-out;
+    }
+
+    &:hover .collapsed-icon {
+        color: rgba(0, 0, 0, 0.87);
     }
 }
