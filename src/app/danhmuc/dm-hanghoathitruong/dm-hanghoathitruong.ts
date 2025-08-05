@@ -17,8 +17,7 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import { DmHangHoaThiTruongService } from '../dm-service/dm-hanghoathitruong/dm-hanghoathitruong.api';
-import { DmHangHoaThiTruongDto } from '../dm-model/dm-hanghoathitruong.model';
-import { PagedRequest, PagedResult } from '../dm-model/page-result';
+import { Dm_HangHoaThiTruongDto } from '../dm-model/dm-hanghoathitruong.model';
 import { TextHighlightPipe } from '../../share/pipes/TextHighlight.pipe';
 
 @Component({
@@ -45,10 +44,10 @@ import { TextHighlightPipe } from '../../share/pipes/TextHighlight.pipe';
   styleUrl: './dm-hanghoathitruong.css'
 })
 export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
-  displayedColumns: string[] = ['maHangHoa', 'tenHangHoa', 'nhomHangHoa', 'xuatXu', 'giaThiTruong', 'giaTruocDo', 'ghiChu'];
-  dataSource = new MatTableDataSource<DmHangHoaThiTruongDto>([]);
+  displayedColumns: string[] = ['ma', 'ten', 'donViTinhTen', 'dacTinh'];
+  dataSource = new MatTableDataSource<Dm_HangHoaThiTruongDto>([]);
   isLoading = false;
-  selectedRow: DmHangHoaThiTruongDto | null = null;
+  selectedRow: Dm_HangHoaThiTruongDto | null = null;
 
   // Phân trang
   totalCount = 0;
@@ -57,12 +56,12 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   searchTerm = '';
 
   // Sắp xếp
-  sortBy = 'createdDate';
+  sortBy = 'CreatedDate';
   sortDescending = true;
 
   // Tree structure
-  private treeData: DmHangHoaThiTruongDto[] = [];
-  private flatData: DmHangHoaThiTruongDto[] = [];
+  private treeData: Dm_HangHoaThiTruongDto[] = [];
+  private expandedNodes = new Set<string>();
 
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
@@ -70,7 +69,7 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild(MatTable) table!: MatTable<DmHangHoaThiTruongDto>;
+  @ViewChild(MatTable) table!: MatTable<Dm_HangHoaThiTruongDto>;
 
   constructor(
     private hangHoaThiTruongService: DmHangHoaThiTruongService,
@@ -88,10 +87,10 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     ).subscribe(term => {
       this.searchTerm = term;
       this.pageNumber = 1; // Reset to first page on search
-      this.performSearch();
+      this.loadTopLevelData(); // Reload data với search term
     });
 
-    this.loadData();
+    this.loadTopLevelData();
   }
 
   ngAfterViewInit(): void {
@@ -113,21 +112,27 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadData(): void {
+  loadTopLevelData(): void {
     this.isLoading = true;
     this.cdr.detectChanges();
 
-    // Load all data để xây dựng cây
-    this.hangHoaThiTruongService.getAll().subscribe({
-      next: (allData: DmHangHoaThiTruongDto[]) => {
-        this.flatData = allData;
-        this.treeData = this.hangHoaThiTruongService.buildTreeStructure(allData);
+    this.hangHoaThiTruongService.getTopLevelItems().subscribe({
+      next: (data: Dm_HangHoaThiTruongDto[]) => {
+        // Khởi tạo tree data với level 0 và hasChildren = true (giả định có children)
+        this.treeData = data.map(item => ({
+          ...item,
+          level: 0,
+          isExpanded: false,
+          hasChildren: true, // Giả định có children, sẽ kiểm tra khi expand
+          children: []
+        }));
+        
         this.updateDisplayData();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Lỗi khi tải dữ liệu:', error);
+        console.error('Lỗi khi tải dữ liệu cấp cao nhất:', error);
         this.showNotification('Không thể tải dữ liệu, vui lòng thử lại sau', 'error');
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -149,11 +154,62 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // Xử lý expand/collapse
-  toggleNode(node: DmHangHoaThiTruongDto): void {
-    if (node.hasChildren) {
-      node.isExpanded = !node.isExpanded;
+  toggleNode(node: Dm_HangHoaThiTruongDto): void {
+    if (!node.hasChildren) return;
+
+    if (node.isExpanded) {
+      // Collapse node
+      node.isExpanded = false;
+      this.expandedNodes.delete(node.id);
       this.updateDisplayData();
+    } else {
+      // Expand node - load children if not loaded
+      if (!node.children || node.children.length === 0) {
+        this.loadChildren(node);
+      } else {
+        node.isExpanded = true;
+        this.expandedNodes.add(node.id);
+        this.updateDisplayData();
+      }
     }
+  }
+
+  loadChildren(parentNode: Dm_HangHoaThiTruongDto): void {
+    this.isLoading = true;
+    
+    const request = {
+      pageNumber: 1,
+      pageSize: 1000, // Load all children
+      sortBy: this.sortBy,
+      sortDescending: this.sortDescending
+    };
+
+    this.hangHoaThiTruongService.getChildren(parentNode.id, request, this.searchTerm).subscribe({
+      next: (result) => {
+        const children = result.items.map(item => ({
+          ...item,
+          level: (parentNode.level || 0) + 1,
+          isExpanded: false,
+          hasChildren: true, // Giả định có children
+          children: []
+        }));
+
+        parentNode.children = children;
+        parentNode.isExpanded = true;
+        parentNode.hasChildren = children.length > 0;
+        this.expandedNodes.add(parentNode.id);
+        
+        this.updateDisplayData();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Lỗi khi tải dữ liệu con:', error);
+        this.showNotification('Không thể tải dữ liệu con, vui lòng thử lại sau', 'error');
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   // Xử lý sự kiện thay đổi trang
@@ -169,18 +225,17 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
       this.sortBy = this.mapSortColumn(sort.active);
       this.sortDescending = sort.direction === 'desc';
       this.pageNumber = 1; // Reset về trang đầu khi sắp xếp
-      this.loadData();
+      this.loadTopLevelData();
     }
   }
 
   // Map tên cột từ frontend sang backend
   private mapSortColumn(column: string): string {
     const columnMap: { [key: string]: string } = {
-      'maHangHoa': 'MaHangHoa',
-      'tenHangHoa': 'TenHangHoa',
-      'nhomHangHoa': 'NhomHangHoa',
-      'xuatXu': 'XuatXu',
-      'giaThiTruong': 'GiaThiTruong'
+      'ma': 'Ma',
+      'ten': 'Ten',
+      'donViTinhTen': 'DonViTinhTen',
+      'dacTinh': 'DacTinh'
     };
     return columnMap[column] || 'CreatedDate';
   }
@@ -189,7 +244,7 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   clearSearch(): void {
     this.searchTerm = '';
     this.pageNumber = 1;
-    this.loadData();
+    this.loadTopLevelData();
   }
 
   editSelected(): void {
@@ -206,10 +261,11 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
       this.showNotification('Vui lòng chọn một bản ghi để xóa', 'error');
       return;
     }
-    this.delete(this.selectedRow.id);
+    // TODO: Implement delete
+    this.showNotification('Chức năng đang phát triển', 'error');
   }
 
-  openDialog(hangHoa?: DmHangHoaThiTruongDto): void {
+  openDialog(hangHoa?: Dm_HangHoaThiTruongDto): void {
     // TODO: Implement dialog
     this.showNotification('Chức năng đang phát triển', 'error');
   }
@@ -217,22 +273,6 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   importExcel(): void {
     // TODO: Implement import
     this.showNotification('Chức năng đang phát triển', 'error');
-  }
-
-  delete(id: string): void {
-    if (confirm('Bạn có chắc chắn muốn xóa hàng hóa này?')) {
-      this.hangHoaThiTruongService.delete(id).subscribe({
-        next: () => {
-          this.showNotification('Xóa thành công', 'success');
-          this.loadData();
-          this.selectedRow = null;
-        },
-        error: (error) => {
-          console.error('Lỗi khi xóa:', error);
-          this.showNotification('Không thể xóa, vui lòng thử lại sau', 'error');
-        }
-      });
-    }
   }
 
   showNotification(message: string, type: 'success' | 'error'): void {
@@ -244,7 +284,7 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  selectRow(row: DmHangHoaThiTruongDto): void {
+  selectRow(row: Dm_HangHoaThiTruongDto): void {
     this.selectedRow = this.selectedRow === row ? null : row;
   }
 
@@ -255,37 +295,7 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
 
   // Add method to handle search button click
   onSearch(): void {
-    this.performSearch();
-  }
-
-  // Implement performSearch method
-  performSearch(): void {
-    if (!this.searchTerm || !this.searchTerm.trim()) {
-      this.loadData(); // Fall back to regular data
-      return;
-    }
-
-    this.isSearching = true;
-    this.isLoading = true;
-    this.cdr.detectChanges();
-
-    this.hangHoaThiTruongService.search(this.searchTerm).subscribe({
-      next: (results) => {
-        // Rebuild tree with search results
-        this.treeData = this.hangHoaThiTruongService.buildTreeStructure(results);
-        this.updateDisplayData();
-        this.isSearching = false;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error searching:', error);
-        this.showNotification('Lỗi khi tìm kiếm dữ liệu', 'error');
-        this.isSearching = false;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.loadTopLevelData();
   }
 
   // Utility methods for tree display
@@ -293,18 +303,11 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     return `${level * 20}px`;
   }
 
-  hasChildren(node: DmHangHoaThiTruongDto): boolean {
+  hasChildren(node: Dm_HangHoaThiTruongDto): boolean {
     return node.hasChildren || false;
   }
 
-  isExpanded(node: DmHangHoaThiTruongDto): boolean {
+  isExpanded(node: Dm_HangHoaThiTruongDto): boolean {
     return node.isExpanded || false;
-  }
-
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
   }
 }

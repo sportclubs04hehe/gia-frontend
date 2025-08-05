@@ -227,6 +227,11 @@
   align-items: center;
 }
 
+/* Style for parent nodes */
+.parent-node .ma-hanghoa-text {
+  font-weight: bold;
+}
+
 /* Tree level styling */
 .tree-level-0 {
   background-color: #f8f9fa !important;

@@ -59,7 +59,7 @@ export class DmDonvitinh implements OnInit, AfterViewInit, OnDestroy {
   searchTerm = '';
 
   // Sắp xếp
-  sortBy = 'createdDate';
+  sortBy = 'CreatedDate';
   sortDescending = true;
 
   private searchSubject = new Subject<string>();
