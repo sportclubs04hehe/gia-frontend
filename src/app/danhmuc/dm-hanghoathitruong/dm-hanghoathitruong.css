@@ -227,9 +227,18 @@
   align-items: center;
 }
 
-/* Style for parent nodes */
+/* Style for parent nodes - bôi đậm text cho nodes có children */
 .parent-node .ma-hanghoa-text {
   font-weight: bold;
+}
+
+/* Thêm class mới để bôi đậm toàn bộ row khi là parent */
+.mat-row.has-children {
+  font-weight: 600;
+}
+
+.mat-row.has-children .mat-cell {
+  font-weight: 600;
 }
 
 /* Tree level styling */

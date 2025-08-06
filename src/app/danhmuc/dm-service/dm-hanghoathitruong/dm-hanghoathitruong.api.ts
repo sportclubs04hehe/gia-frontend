@@ -108,18 +108,25 @@ export class DmHangHoaThiTruongService {
    * Chuyển đổi cây thành danh sách phẳng để hiển thị
    */
   flattenTreeForDisplay(treeData: Dm_HangHoaThiTruongDto[]): Dm_HangHoaThiTruongDto[] {
+    // Chỉ log một lần khi method được gọi
+    console.log('🔄 flattenTreeForDisplay: Processing', treeData.length, 'root nodes');
+    
     const result: Dm_HangHoaThiTruongDto[] = [];
 
-    const flatten = (nodes: Dm_HangHoaThiTruongDto[]) => {
+    const flatten = (nodes: Dm_HangHoaThiTruongDto[], currentLevel: number = 0) => {
       nodes.forEach(node => {
         result.push(node);
+        
         if (node.isExpanded && node.children && node.children.length > 0) {
-          flatten(node.children);
+          flatten(node.children, currentLevel + 1);
         }
       });
     };
 
     flatten(treeData);
+    
+    console.log('✅ flattenTreeForDisplay: Result =', result.length, 'rows');
+    
     return result;
   }
 }

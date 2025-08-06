@@ -43,7 +43,7 @@
 
     <div class="table-scroll">
       <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSortChange($event)" class="full-width-table">
-
+        
         <!-- Mã hàng hóa Column -->
         <ng-container matColumnDef="ma">
           <th mat-header-cell *matHeaderCellDef mat-sort-header="ma">Mã hàng hóa</th>
@@ -83,6 +83,7 @@
         <tr mat-header-row *matHeaderRowDef="displayedColumns" class="sticky-header"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row)"
           [class.selected-row]="row === selectedRow"
+          [class.has-children]="row.hasChildren"
           [class.tree-level-0]="row.level === 0"
           [class.tree-level-1]="row.level === 1"
           [class.tree-level-2]="row.level === 2"></tr>
