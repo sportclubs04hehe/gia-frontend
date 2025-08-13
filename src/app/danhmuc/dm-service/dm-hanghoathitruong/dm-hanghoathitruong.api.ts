@@ -5,7 +5,7 @@ import { environment } from '../../../../environments/environment.development';
 import { PagedResult, PagedRequest } from '../../dm-model/page-result';
 import { ValidationResult } from '../../dm-model/validation-result.model';
 import { ImportResultDto } from '../../dm-model/import-model';
-import { Dm_HangHoaThiTruongDto, DmHangHoaThiTruongCreateDto, DmHangHoaThiTruongUpdateDto } from '../../dm-model/dm-hanghoathitruong.model';
+import { Dm_HangHoaThiTruongDto, Dm_HangHoaThiTruongTreeDto, DmHangHoaThiTruongCreateDto, DmHangHoaThiTruongUpdateDto } from '../../dm-model/dm-hanghoathitruong.model';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +21,13 @@ export class DmHangHoaThiTruongService {
    */
   getTopLevelItems(): Observable<Dm_HangHoaThiTruongDto[]> {
     return this.http.get<Dm_HangHoaThiTruongDto[]>(`${this.endpoint}/top-level`);
+  }
+
+  /**
+ * Lấy danh sách tất cả mặt hàng cha dạng cây
+ */
+  getAllParentItems(): Observable<Dm_HangHoaThiTruongTreeDto[]> {
+    return this.http.get<Dm_HangHoaThiTruongTreeDto[]>(`${this.endpoint}/all-parents`);
   }
 
   /**
@@ -53,6 +60,28 @@ export class DmHangHoaThiTruongService {
   getById(id: string): Observable<Dm_HangHoaThiTruongDto> {
     return this.http.get<Dm_HangHoaThiTruongDto>(`${this.endpoint}/${id}`);
   }
+
+  /**
+   * Kiểm tra mã hàng hóa thị trường có tồn tại ở cùng cấp hay không
+   * @param code Mã hàng hóa cần kiểm tra
+   * @param parentId ID của hàng hóa cha (nếu có)
+   * @param excludeId ID của hàng hóa cần loại trừ (nếu có)
+   * @returns Kết quả kiểm tra
+   */
+  checkCodeExists(code: string, parentId?: string, excludeId?: string): Observable<{ message: string }> {
+    const params: any = { code };
+
+    if (parentId) {
+      params.parentId = parentId;
+    }
+
+    if (excludeId) {
+      params.excludeId = excludeId;
+    }
+
+    return this.http.get<{ message: string }>(`${this.endpoint}/check-code`, { params });
+  }
+
 
   /**
    * Thêm mới hàng hóa thị trường
@@ -108,13 +137,13 @@ export class DmHangHoaThiTruongService {
    * Chuyển đổi cây thành danh sách phẳng để hiển thị
    */
   flattenTreeForDisplay(treeData: Dm_HangHoaThiTruongDto[]): Dm_HangHoaThiTruongDto[] {
-    
+
     const result: Dm_HangHoaThiTruongDto[] = [];
 
     const flatten = (nodes: Dm_HangHoaThiTruongDto[], currentLevel: number = 0) => {
       nodes.forEach(node => {
         result.push(node);
-        
+
         if (node.isExpanded && node.children && node.children.length > 0) {
           flatten(node.children, currentLevel + 1);
         }
@@ -122,7 +151,7 @@ export class DmHangHoaThiTruongService {
     };
 
     flatten(treeData);
-    
+
     return result;
   }
 }

@@ -55,12 +55,13 @@ export interface Dm_HangHoaThiTruongTreeDto {
   ma: string;
   ten: string;
   ghiChu?: string | null;
-  dacTinh?: string | null;
-  donViTinhId?: string | null;
-  donViTinhTen?: string | null;
-  depth: number;
   ngayHieuLuc: Date;
   ngayHetHieuLuc: Date;
+  hasChildren: boolean;
+  createdDate?: Date | null;
+  modifiedDate?: Date | null;
+  createdBy?: string | null;
+  modifiedBy?: string | null;
   children: Dm_HangHoaThiTruongTreeDto[];
 }
 
