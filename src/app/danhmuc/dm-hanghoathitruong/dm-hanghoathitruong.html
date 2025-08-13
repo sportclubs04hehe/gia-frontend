@@ -24,40 +24,78 @@
         <span>Import Excel</span>
       </button>
     </div>
+
     <div class="search-container">
       <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
         <mat-label>Tìm kiếm</mat-label>
         <input matInput [(ngModel)]="searchTerm" (input)="onSearchInput()" placeholder="Tìm theo mã, tên...">
         <mat-icon matPrefix>search</mat-icon>
-        <button *ngIf="searchTerm" matSuffix mat-icon-button aria-label="Clear" (click)="clearSearch()">
-          <mat-icon>close</mat-icon>
-        </button>
+
+        @if (searchTerm) {
+          <button matSuffix mat-icon-button aria-label="Clear" (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
       </mat-form-field>
     </div>
   </div>
 
   <div class="mat-elevation-z8 table-wrapper">
-    <div class="loading-shade" *ngIf="isLoading">
-      <mat-spinner diameter="48"></mat-spinner>
-    </div>
+    @if (isLoading) {
+      <div class="loading-shade">
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+    }
 
-    <div class="table-scroll">
-      <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSortChange($event)" class="full-width-table">
-        
+    <div class="table-scroll" (scroll)="onTableScroll($event)">
+      <table
+        mat-table
+        [dataSource]="dataSource"
+        matSort
+        (matSortChange)="onSortChange($event)"
+        class="full-width-table"
+      >
         <!-- Mã hàng hóa Column -->
         <ng-container matColumnDef="ma">
           <th mat-header-cell *matHeaderCellDef mat-sort-header="ma">Mã hàng hóa</th>
-          <td mat-cell *matCellDef="let row" class="ma-hanghoa-cell" [ngClass]="{'parent-node': row.hasChildren}">
+          <td
+            mat-cell
+            *matCellDef="let row"
+            class="ma-hanghoa-cell"
+            [ngClass]="{'parent-node': row.hasChildren}"
+          >
             <div class="tree-node-content" [style.margin-left]="getIndentation(row.level || 0)">
-              <button
-                *ngIf="hasChildren(row)"
-                mat-icon-button
-                (click)="toggleNode(row); $event.stopPropagation()"
-                class="expand-button-inline">
-                <mat-icon>{{isExpanded(row) ? 'expand_more' : 'chevron_right'}}</mat-icon>
-              </button>
-              <span *ngIf="!hasChildren(row)" class="leaf-spacer-inline"></span>
-              <span class="ma-hanghoa-text" [innerHTML]="row.ma | textHighlight:searchTerm" [title]="row.ma"></span>
+              @if (hasChildren(row)) {
+                <button
+                  mat-icon-button
+                  (click)="toggleNode(row); $event.stopPropagation()"
+                  class="expand-button-inline"
+                  [disabled]="isLoadingChildren(row.id)"
+                >
+                  @if (!isLoadingChildren(row.id)) {
+                    <mat-icon>
+                      {{ isExpanded(row) ? 'expand_more' : 'chevron_right' }}
+                    </mat-icon>
+                  } @else {
+                    <mat-spinner diameter="16"></mat-spinner>
+                  }
+                </button>
+              } @else {
+                <span class="leaf-spacer-inline"></span>
+              }
+
+              <span
+                class="ma-hanghoa-text"
+                [innerHTML]="row.ma | textHighlight:searchTerm"
+                [title]="row.ma"
+              ></span>
+
+              @if (row.isExpanded && canLoadMore(row.id)) {
+                <span class="load-more-indicator">
+                  <mat-icon class="load-more-icon">more_horiz</mat-icon>
+                  <span class="load-more-text">Cuộn xuống để tải thêm...</span>
+                </span>
+              }
             </div>
           </td>
         </ng-container>
@@ -71,28 +109,44 @@
         <!-- Đơn vị tính Column -->
         <ng-container matColumnDef="donViTinhTen">
           <th mat-header-cell *matHeaderCellDef mat-sort-header="donViTinhTen">Đơn vị tính</th>
-          <td mat-cell *matCellDef="let row" [innerHTML]="(row.donViTinhTen || '-') | textHighlight:searchTerm" [title]="row.donViTinhTen || '-'"></td>
+          <td
+            mat-cell
+            *matCellDef="let row"
+            [innerHTML]="(row.donViTinhTen || '-') | textHighlight:searchTerm"
+            [title]="row.donViTinhTen || '-'"
+          ></td>
         </ng-container>
 
         <!-- Đặc tính Column -->
         <ng-container matColumnDef="dacTinh">
           <th mat-header-cell *matHeaderCellDef mat-sort-header="dacTinh">Đặc tính</th>
-          <td mat-cell *matCellDef="let row" [innerHTML]="(row.dacTinh || '-') | textHighlight:searchTerm" [title]="row.dacTinh || '-'"></td>
+          <td
+            mat-cell
+            *matCellDef="let row"
+            [innerHTML]="(row.dacTinh || '-') | textHighlight:searchTerm"
+            [title]="row.dacTinh || '-'"
+          ></td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns" class="sticky-header"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row)"
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns;"
+          (click)="selectRow(row)"
           [class.selected-row]="row === selectedRow"
           [class.has-children]="row.hasChildren"
           [class.tree-level-0]="row.level === 0"
           [class.tree-level-1]="row.level === 1"
-          [class.tree-level-2]="row.level === 2"></tr>
+          [class.tree-level-2]="row.level === 2"
+        ></tr>
 
         <tr class="mat-row" *matNoDataRow>
           <td class="mat-cell" colspan="4">
             <div class="no-data-message">
               <mat-icon>info</mat-icon>
-              <span>{{searchTerm ? 'Không tìm thấy kết quả phù hợp' : 'Không có dữ liệu hàng hóa thị trường'}}</span>
+              <span>
+                {{ searchTerm ? 'Không tìm thấy kết quả phù hợp' : 'Không có dữ liệu hàng hóa thị trường' }}
+              </span>
             </div>
           </td>
         </tr>
@@ -100,7 +154,13 @@
     </div>
   </div>
 
-  <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[50, 100, 200, 500]"
-    (page)="onPageChange($event)" aria-label="Chọn trang" showFirstLastButtons>
+  <mat-paginator
+    [length]="totalCount"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[50, 100, 200, 500]"
+    (page)="onPageChange($event)"
+    aria-label="Chọn trang"
+    showFirstLastButtons
+  >
   </mat-paginator>
 </div>

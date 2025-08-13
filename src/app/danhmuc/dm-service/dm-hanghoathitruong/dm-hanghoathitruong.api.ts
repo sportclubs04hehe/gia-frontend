@@ -108,8 +108,6 @@ export class DmHangHoaThiTruongService {
    * Chuyển đổi cây thành danh sách phẳng để hiển thị
    */
   flattenTreeForDisplay(treeData: Dm_HangHoaThiTruongDto[]): Dm_HangHoaThiTruongDto[] {
-    // Chỉ log một lần khi method được gọi
-    console.log('🔄 flattenTreeForDisplay: Processing', treeData.length, 'root nodes');
     
     const result: Dm_HangHoaThiTruongDto[] = [];
 
@@ -124,8 +122,6 @@ export class DmHangHoaThiTruongService {
     };
 
     flatten(treeData);
-    
-    console.log('✅ flattenTreeForDisplay: Result =', result.length, 'rows');
     
     return result;
   }

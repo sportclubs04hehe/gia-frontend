@@ -186,6 +186,7 @@
   align-items: center;
   gap: 2px;
   height: 100%;
+  transition: all 0.2s ease;
 }
 
 .expand-button-inline {
@@ -198,6 +199,10 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+.expand-button-inline:disabled {
+  opacity: 0.6;
 }
 
 .expand-button-inline .mat-icon {
@@ -456,4 +461,23 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.load-more-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  color: #666;
+  font-size: 12px;
+}
+
+.load-more-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
+.load-more-text {
+  font-style: italic;
 }

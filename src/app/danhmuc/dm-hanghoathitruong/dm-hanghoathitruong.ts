@@ -33,10 +33,12 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 
 import { DmHangHoaThiTruongService } from '../dm-service/dm-hanghoathitruong/dm-hanghoathitruong.api';
 import { Dm_HangHoaThiTruongDto } from '../dm-model/dm-hanghoathitruong.model';
 import { TextHighlightPipe } from '../../share/pipes/TextHighlight.pipe';
+import { PagedRequest } from '../dm-model/page-result';
 
 @Component({
   selector: 'app-dm-hanghoathitruong',
@@ -56,7 +58,8 @@ import { TextHighlightPipe } from '../../share/pipes/TextHighlight.pipe';
     MatFormFieldModule,
     MatInputModule,
     FormsModule,
-    TextHighlightPipe
+    TextHighlightPipe,
+    ScrollingModule
   ],
   templateUrl: './dm-hanghoathitruong.html',
   styleUrl: './dm-hanghoathitruong.css'
@@ -82,9 +85,19 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
   isSearching = false;
 
+  // Constants
+  private readonly CHILDREN_PAGE_SIZE = 150;
+  private readonly SCROLL_THRESHOLD = 0.8; // Load more when 80% scrolled
+  
+  // Track loading state for each parent
+  private loadingChildren = new Map<string, boolean>();
+  private childrenPageNumbers = new Map<string, number>();
+  private childrenHasMore = new Map<string, boolean>();
+
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatTable) table!: MatTable<Dm_HangHoaThiTruongDto>;
+  @ViewChild(CdkVirtualScrollViewport) virtualScrollViewport!: CdkVirtualScrollViewport;
 
   constructor(
     private hangHoaThiTruongService: DmHangHoaThiTruongService,
@@ -163,13 +176,17 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     if (!node.hasChildren) return;
 
     if (node.isExpanded) {
+      // Collapse
       node.isExpanded = false;
       this.expandedNodes.delete(node.id);
       this.updateDisplayData();
     } else {
+      // Expand
       if (!node.children || node.children.length === 0) {
-        this.loadChildren(node);
+        // First time loading
+        this.loadChildren(node, false);
       } else {
+        // Already has data, just expand
         node.isExpanded = true;
         this.expandedNodes.add(node.id);
         this.updateDisplayData();
@@ -177,18 +194,34 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  loadChildren(parentNode: Dm_HangHoaThiTruongDto): void {
-    this.isLoading = true;
-    const request = {
-      pageNumber: 1,
-      pageSize: 1000,
-      sortBy: this.sortBy,
-      sortDescending: false
+  loadChildren(parentNode: Dm_HangHoaThiTruongDto, loadMore: boolean = false): void {
+    const parentId = parentNode.id;
+    
+    // Prevent duplicate loading
+    if (this.loadingChildren.get(parentId)) {
+      return;
+    }
+
+    this.loadingChildren.set(parentId, true);
+    
+    // Get current page number for this parent
+    let currentPage = this.childrenPageNumbers.get(parentId) || 1;
+    if (loadMore) {
+      currentPage++;
+    } else {
+      currentPage = 1; // Reset for fresh load
+    }
+
+    const request: PagedRequest = {
+      pageNumber: currentPage,
+      pageSize: this.CHILDREN_PAGE_SIZE,
+      sortBy: 'Ma', // Fixed sort for children
+      sortDescending: false // Thêm dòng này - mặc định sort ascending
     };
 
     this.hangHoaThiTruongService.getChildren(parentNode.id, request, this.searchTerm).subscribe({
-      next: result => {
-        const children = result.items.map(item => ({
+      next: (result) => {
+        const newChildren = result.items.map(item => ({
           ...item,
           level: (parentNode.level || 0) + 1,
           isExpanded: false,
@@ -196,21 +229,76 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
           children: []
         }));
 
-        parentNode.children = children;
-        parentNode.isExpanded = true;
-        parentNode.hasChildren = children.length > 0;
-        this.expandedNodes.add(parentNode.id);
+        if (loadMore && parentNode.children) {
+          // Append to existing children
+          parentNode.children = [...parentNode.children, ...newChildren];
+        } else {
+          // Fresh load
+          parentNode.children = newChildren;
+          parentNode.isExpanded = true;
+          this.expandedNodes.add(parentNode.id);
+        }
+
+        // Update tracking
+        this.childrenPageNumbers.set(parentId, currentPage);
+        this.childrenHasMore.set(parentId, newChildren.length === this.CHILDREN_PAGE_SIZE);
+        this.loadingChildren.set(parentId, false);
 
         this.updateDisplayData();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (error) => {
+        console.error('❌ loadChildren ERROR:', error);
+        this.loadingChildren.set(parentId, false);
         this.showNotification('Không thể tải dữ liệu con, vui lòng thử lại sau', 'error');
         this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
+  }
+
+  // Handle scroll events for lazy loading
+  onTableScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const scrollTop = element.scrollTop;
+    const scrollHeight = element.scrollHeight;
+    const clientHeight = element.clientHeight;
+    
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+    
+    // Load more when scrolled 80%
+    if (scrollPercentage >= this.SCROLL_THRESHOLD) {
+      this.loadMoreChildrenIfNeeded();
+    }
+  }
+
+  private loadMoreChildrenIfNeeded(): void {
+    // Find parent nodes that are expanded and can load more
+    const expandedParents = this.findExpandedParentsNeedingMore();
+    
+    expandedParents.forEach(parent => {
+      if (this.childrenHasMore.get(parent.id) && !this.loadingChildren.get(parent.id)) {
+        this.loadChildren(parent, true);
+      }
+    });
+  }
+
+  private findExpandedParentsNeedingMore(): Dm_HangHoaThiTruongDto[] {
+    const result: Dm_HangHoaThiTruongDto[] = [];
+    
+    const checkNode = (node: Dm_HangHoaThiTruongDto) => {
+      if (node.isExpanded && node.children && this.childrenHasMore.get(node.id)) {
+        result.push(node);
+      }
+      
+      if (node.children) {
+        node.children.forEach(child => checkNode(child));
+      }
+    };
+    
+    this.treeData.forEach(node => checkNode(node));
+    return result;
   }
 
   onPageChange(event: PageEvent): void {
@@ -240,6 +328,13 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   clearSearch(): void {
     this.searchTerm = '';
     this.pageNumber = 1;
+    
+    // Clear children tracking
+    this.childrenPageNumbers.clear();
+    this.childrenHasMore.clear();
+    this.loadingChildren.clear();
+    this.expandedNodes.clear();
+    
     this.loadTopLevelData();
   }
 
@@ -298,5 +393,16 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
 
   isExpanded(node: Dm_HangHoaThiTruongDto): boolean {
     return node.isExpanded || false;
+  }
+
+  // Helper method to check if parent can load more
+  canLoadMore(parentId: string): boolean {
+    return this.childrenHasMore.get(parentId) === true && 
+           this.loadingChildren.get(parentId) !== true;
+  }
+
+  // Helper method to get loading state
+  isLoadingChildren(parentId: string): boolean {
+    return this.loadingChildren.get(parentId) === true;
   }
 }

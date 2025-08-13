@@ -7,18 +7,25 @@
         <mat-label>Mã đơn vị tính</mat-label>
         <input matInput formControlName="ma" placeholder="Nhập mã đơn vị tính">
 
-        <!-- Spinner khi đang kiểm tra -->
-        <mat-spinner matSuffix *ngIf="isCheckingCode" diameter="20"></mat-spinner>
+        @if (isCheckingCode) {
+          <mat-spinner matSuffix diameter="20"></mat-spinner>
+        }
 
-        <mat-error *ngIf="form.controls['ma'].hasError('required')">
-          Mã không được để trống
-        </mat-error>
-        <mat-error *ngIf="form.controls['ma'].hasError('maxlength')">
-          Mã không được vượt quá 20 ký tự
-        </mat-error>
-        <mat-error *ngIf="form.controls['ma'].hasError('codeExists')">
-          Mã đơn vị tính đã tồn tại
-        </mat-error>
+        @if (form.controls['ma'].hasError('required')) {
+          <mat-error>
+            Mã không được để trống
+          </mat-error>
+        }
+        @if (form.controls['ma'].hasError('maxlength')) {
+          <mat-error>
+            Mã không được vượt quá 20 ký tự
+          </mat-error>
+        }
+        @if (form.controls['ma'].hasError('codeExists')) {
+          <mat-error>
+            Mã đơn vị tính đã tồn tại
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -26,12 +33,17 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Tên đơn vị tính</mat-label>
         <input matInput formControlName="ten" placeholder="Nhập tên đơn vị tính">
-        <mat-error *ngIf="form.controls['ten'].hasError('required')">
-          Tên không được để trống
-        </mat-error>
-        <mat-error *ngIf="form.controls['ten'].hasError('maxlength')">
-          Tên không được vượt quá 100 ký tự
-        </mat-error>
+
+        @if (form.controls['ten'].hasError('required')) {
+          <mat-error>
+            Tên không được để trống
+          </mat-error>
+        }
+        @if (form.controls['ten'].hasError('maxlength')) {
+          <mat-error>
+            Tên không được vượt quá 100 ký tự
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -39,9 +51,12 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Ghi chú</mat-label>
         <textarea matInput formControlName="ghiChu" placeholder="Nhập ghi chú"></textarea>
-        <mat-error *ngIf="form.controls['ghiChu'].hasError('maxlength')">
-          Ghi chú không được vượt quá 500 ký tự
-        </mat-error>
+
+        @if (form.controls['ghiChu'].hasError('maxlength')) {
+          <mat-error>
+            Ghi chú không được vượt quá 500 ký tự
+          </mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -51,9 +66,12 @@
         <input matInput [matDatepicker]="startPicker" formControlName="ngayHieuLuc">
         <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
         <mat-datepicker #startPicker></mat-datepicker>
-        <mat-error *ngIf="form.controls['ngayHieuLuc'].hasError('required')">
-          Ngày hiệu lực không được để trống
-        </mat-error>
+
+        @if (form.controls['ngayHieuLuc'].hasError('required')) {
+          <mat-error>
+            Ngày hiệu lực không được để trống
+          </mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -61,9 +79,12 @@
         <input matInput [matDatepicker]="endPicker" formControlName="ngayHetHieuLuc">
         <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
         <mat-datepicker #endPicker></mat-datepicker>
-        <mat-error *ngIf="form.controls['ngayHetHieuLuc'].hasError('required')">
-          Ngày hết hiệu lực không được để trống
-        </mat-error>
+
+        @if (form.controls['ngayHetHieuLuc'].hasError('required')) {
+          <mat-error>
+            Ngày hết hiệu lực không được để trống
+          </mat-error>
+        }
       </mat-form-field>
     </div>
   </mat-dialog-content>

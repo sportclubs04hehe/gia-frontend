@@ -1,190 +1,212 @@
 <div class="import-container">
-    <h2 mat-dialog-title>Import Đơn Vị Tính</h2>
+  <h2 mat-dialog-title>Import Đơn Vị Tính</h2>
 
-    <div mat-dialog-content>
-        <mat-stepper [linear]="true" #stepper [(selectedIndex)]="currentStep">
-            <!-- Bước 1: Tải file mẫu và chọn file -->
-            <mat-step>
-                <ng-template matStepLabel>Chọn file Excel</ng-template>
-                <div class="step-content">
-                    <p class="description">
-                        Vui lòng tải file mẫu để đảm bảo định dạng đúng. File cần có các cột: <strong>Mã</strong>,
-                        <strong>Tên</strong>, và <strong>Ghi chú</strong>.
-                    </p>
+  <div mat-dialog-content>
+    <mat-stepper [linear]="true" #stepper [(selectedIndex)]="currentStep">
+      <!-- Bước 1: Tải file mẫu và chọn file -->
+      <mat-step>
+        <ng-template matStepLabel>Chọn file Excel</ng-template>
+        <div class="step-content">
+          <p class="description">
+            Vui lòng tải file mẫu để đảm bảo định dạng đúng. File cần có các cột:
+            <strong>Mã</strong>, <strong>Tên</strong>, và <strong>Ghi chú</strong>.
+          </p>
 
-                    <!-- Thay thế phần button-group và file-upload -->
-                    <div class="action-row">
-                        <div class="button-group">
-                            <button mat-raised-button color="primary" (click)="downloadTemplate()">
-                                <mat-icon>download</mat-icon> Tải file mẫu
-                            </button>
+          <div class="action-row">
+            <div class="button-group">
+              <button mat-raised-button color="primary" (click)="downloadTemplate()">
+                <mat-icon>download</mat-icon> Tải file mẫu
+              </button>
 
-                            <div class="file-upload">
-                                <input type="file" #fileInput accept=".xlsx, .xls" (change)="onFileSelected($event)"
-                                    style="display: none" />
-                                <button mat-stroked-button color="primary" (click)="fileInput.click()"
-                                    [disabled]="isLoading">
-                                    <mat-icon>upload_file</mat-icon> Chọn file Excel
-                                </button>
-                                <span class="file-name" *ngIf="selectedFile">{{ selectedFile.name }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cải thiện phần info-box -->
-                    <div class="info-box">
-                        <div class="info-icon">
-                            <mat-icon>info</mat-icon>
-                        </div>
-                        <div class="info-content">
-                            <p class="info-title">Yêu cầu:</p>
-                            <ul class="info-list">
-                                <li>Định dạng: .xlsx hoặc .xls</li>
-                                <li>Kích thước tối đa: 10MB</li>
-                                <li>Mã không được trùng lặp</li>
-                                <li>Tên không được để trống</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </mat-step>
-
-            <!-- Bước 2: Kiểm tra và xác nhận dữ liệu -->
-            <mat-step>
-                <ng-template matStepLabel>Kiểm tra dữ liệu</ng-template>
-                <div class="step-content">
-                    <!-- Đặt thông báo lên đầu bước 2 với lớp alert -->
-                    <div class="alert-info">
-                        <mat-icon>info</mat-icon>
-                        Vui lòng kiểm tra dữ liệu trước khi import. Các dòng có lỗi sẽ được đánh dấu màu đỏ.
-                    </div>
-
-                    <div class="table-container mat-elevation-z8">
-                        <div class="loading-shade" *ngIf="isLoading">
-                            <mat-spinner></mat-spinner>
-                        </div>
-
-                        <table mat-table [dataSource]="dataSource" class="full-width-table">
-                            <!-- STT Column -->
-                            <ng-container matColumnDef="rowNum">
-                                <th mat-header-cell *matHeaderCellDef>STT</th>
-                                <td mat-cell *matCellDef="let element">{{ element.rowNum }}</td>
-                            </ng-container>
-
-                            <!-- Mã Column -->
-                            <ng-container matColumnDef="ma">
-                                <th mat-header-cell *matHeaderCellDef>Mã</th>
-                                <td mat-cell *matCellDef="let element">{{ element.ma }}</td>
-                            </ng-container>
-
-                            <!-- Tên Column -->
-                            <ng-container matColumnDef="ten">
-                                <th mat-header-cell *matHeaderCellDef>Tên</th>
-                                <td mat-cell *matCellDef="let element">{{ element.ten }}</td>
-                            </ng-container>
-
-                            <!-- Ghi chú Column -->
-                            <ng-container matColumnDef="ghiChu">
-                                <th mat-header-cell *matHeaderCellDef>Ghi chú</th>
-                                <td mat-cell *matCellDef="let element">{{ element.ghiChu || '-' }}</td>
-                            </ng-container>
-
-                            <!-- Status Column -->
-                            <ng-container matColumnDef="status">
-                                <th mat-header-cell *matHeaderCellDef>Trạng thái</th>
-                                <td mat-cell *matCellDef="let element">
-                                    <mat-icon *ngIf="element.hasError" color="warn"
-                                        matTooltip="{{element.errorMessage}}">error</mat-icon>
-                                </td>
-                            </ng-container>
-
-                            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                            <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-                                [ngClass]="{'error-row': row.hasError}"></tr>
-
-                            <!-- No data row -->
-                            <tr class="mat-row" *matNoDataRow>
-                                <td class="mat-cell" [attr.colspan]="displayedColumns.length">
-                                    Không có dữ liệu
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </mat-step>
-
-            <!-- Bước 3: Kết quả -->
-            <mat-step>
-                <ng-template matStepLabel>Kết quả</ng-template>
-                <div class="step-content">
-                    <div class="result-container" *ngIf="importResult && currentStep === 2">
-                        <h3>Kết quả Import</h3>
-
-                        <div class="result-summary">
-                            <div class="result-item">
-                                <span class="label">Tổng số bản ghi:</span>
-                                <span class="value">{{ importResult.totalRecords }}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="label">Import thành công:</span>
-                                <span class="value success">{{ importResult.successCount }}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="label">Lỗi:</span>
-                                <span class="value error">{{ importResult.errorCount }}</span>
-                            </div>
-                        </div>
-
-                        <div class="error-list" *ngIf="importResult.errorCount > 0">
-                            <h4>Chi tiết lỗi:</h4>
-                            <div class="error-item" *ngFor="let error of importResult.errors">
-                                <div><strong>Dòng {{ error.row }}:</strong> {{ error.message }}</div>
-                                <ul *ngIf="error.columnErrors">
-                                    <li *ngFor="let columnError of objectToArray(error.columnErrors)">
-                                        {{ columnError }}
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </mat-step>
-        </mat-stepper>
-    </div>
-
-    <div mat-dialog-actions class="action-buttons">
-        <!-- Nút điều khiển cho bước 1 -->
-        <ng-container *ngIf="currentStep === 0">
-            <button mat-button mat-dialog-close>Đóng</button>
-        </ng-container>
-
-        <!-- Nút điều khiển cho bước 2 -->
-        <ng-container *ngIf="currentStep === 1">
-            <div class="left-buttons">
-
-                <button mat-button (click)="currentStep = 0">Quay lại</button>
-                <button mat-raised-button color="primary" (click)="importDataToServer()"
-                    [disabled]="isLoading || dataSource.data.length === 0">
-                    <mat-icon>cloud_upload</mat-icon> Xác nhận Import
+              <div class="file-upload">
+                <input
+                  type="file"
+                  #fileInput
+                  accept=".xlsx, .xls"
+                  (change)="onFileSelected($event)"
+                  style="display: none"
+                />
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  (click)="fileInput.click()"
+                  [disabled]="isLoading"
+                >
+                  <mat-icon>upload_file</mat-icon> Chọn file Excel
                 </button>
-            </div>
-            <div class="right-buttons">
-                <button mat-button mat-dialog-close>Đóng</button>
-            </div>
-        </ng-container>
 
-        <!-- Nút điều khiển cho bước 3 -->
-        <ng-container *ngIf="currentStep === 2">
-            <div class="left-buttons">
-                <button mat-raised-button color="primary" (click)="complete()">
-                    <mat-icon>check</mat-icon> Hoàn thành
-                </button>
-                <button mat-button (click)="reset()">Import Lại</button>
-                
+                @if (selectedFile) {
+                  <span class="file-name">{{ selectedFile.name }}</span>
+                }
+              </div>
             </div>
-            <div class="right-buttons">
-                <button mat-button mat-dialog-close>Đóng</button>
+          </div>
+
+          <div class="info-box">
+            <div class="info-icon">
+              <mat-icon>info</mat-icon>
             </div>
-        </ng-container>
-    </div>
+            <div class="info-content">
+              <p class="info-title">Yêu cầu:</p>
+              <ul class="info-list">
+                <li>Định dạng: .xlsx hoặc .xls</li>
+                <li>Kích thước tối đa: 10MB</li>
+                <li>Mã không được trùng lặp</li>
+                <li>Tên không được để trống</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Bước 2: Kiểm tra và xác nhận dữ liệu -->
+      <mat-step>
+        <ng-template matStepLabel>Kiểm tra dữ liệu</ng-template>
+        <div class="step-content">
+          <div class="alert-info">
+            <mat-icon>info</mat-icon>
+            Vui lòng kiểm tra dữ liệu trước khi import. Các dòng có lỗi sẽ được đánh dấu màu đỏ.
+          </div>
+
+          <div class="table-container mat-elevation-z8">
+            @if (isLoading) {
+              <div class="loading-shade">
+                <mat-spinner></mat-spinner>
+              </div>
+            }
+
+            <table mat-table [dataSource]="dataSource" class="full-width-table">
+              <!-- STT Column -->
+              <ng-container matColumnDef="rowNum">
+                <th mat-header-cell *matHeaderCellDef>STT</th>
+                <td mat-cell *matCellDef="let element">{{ element.rowNum }}</td>
+              </ng-container>
+
+              <!-- Mã Column -->
+              <ng-container matColumnDef="ma">
+                <th mat-header-cell *matHeaderCellDef>Mã</th>
+                <td mat-cell *matCellDef="let element">{{ element.ma }}</td>
+              </ng-container>
+
+              <!-- Tên Column -->
+              <ng-container matColumnDef="ten">
+                <th mat-header-cell *matHeaderCellDef>Tên</th>
+                <td mat-cell *matCellDef="let element">{{ element.ten }}</td>
+              </ng-container>
+
+              <!-- Ghi chú Column -->
+              <ng-container matColumnDef="ghiChu">
+                <th mat-header-cell *matHeaderCellDef>Ghi chú</th>
+                <td mat-cell *matCellDef="let element">{{ element.ghiChu || '-' }}</td>
+              </ng-container>
+
+              <!-- Status Column -->
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Trạng thái</th>
+                <td mat-cell *matCellDef="let element">
+                  @if (element.hasError) {
+                    <mat-icon color="warn" matTooltip="{{ element.errorMessage }}">error</mat-icon>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: displayedColumns;"
+                [ngClass]="{ 'error-row': row.hasError }"
+              ></tr>
+
+              <!-- No data row -->
+              <tr class="mat-row" *matNoDataRow>
+                <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+                  Không có dữ liệu
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Bước 3: Kết quả -->
+      <mat-step>
+        <ng-template matStepLabel>Kết quả</ng-template>
+        <div class="step-content">
+          @if (importResult && currentStep === 2) {
+            <div class="result-container">
+              <h3>Kết quả Import</h3>
+
+              <div class="result-summary">
+                <div class="result-item">
+                  <span class="label">Tổng số bản ghi:</span>
+                  <span class="value">{{ importResult.totalRecords }}</span>
+                </div>
+                <div class="result-item">
+                  <span class="label">Import thành công:</span>
+                  <span class="value success">{{ importResult.successCount }}</span>
+                </div>
+                <div class="result-item">
+                  <span class="label">Lỗi:</span>
+                  <span class="value error">{{ importResult.errorCount }}</span>
+                </div>
+              </div>
+
+              @if (importResult.errorCount > 0) {
+                <div class="error-list">
+                  <h4>Chi tiết lỗi:</h4>
+
+                  <div class="error-item" *ngFor="let error of importResult.errors">
+                    <div><strong>Dòng {{ error.row }}:</strong> {{ error.message }}</div>
+
+                    @if (error.columnErrors) {
+                      <ul>
+                        <li *ngFor="let columnError of objectToArray(error.columnErrors)">
+                          {{ columnError }}
+                        </li>
+                      </ul>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </mat-step>
+    </mat-stepper>
+  </div>
+
+  <div mat-dialog-actions class="action-buttons">
+    @if (currentStep === 0) {
+      <button mat-button mat-dialog-close>Đóng</button>
+    }
+
+    @if (currentStep === 1) {
+      <div class="left-buttons">
+        <button mat-button (click)="currentStep = 0">Quay lại</button>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="importDataToServer()"
+          [disabled]="isLoading || dataSource.data.length === 0"
+        >
+          <mat-icon>cloud_upload</mat-icon> Xác nhận Import
+        </button>
+      </div>
+      <div class="right-buttons">
+        <button mat-button mat-dialog-close>Đóng</button>
+      </div>
+    }
+
+    @if (currentStep === 2) {
+      <div class="left-buttons">
+        <button mat-raised-button color="primary" (click)="complete()">
+          <mat-icon>check</mat-icon> Hoàn thành
+        </button>
+        <button mat-button (click)="reset()">Import Lại</button>
+      </div>
+      <div class="right-buttons">
+        <button mat-button mat-dialog-close>Đóng</button>
+      </div>
+    }
+  </div>
 </div>
