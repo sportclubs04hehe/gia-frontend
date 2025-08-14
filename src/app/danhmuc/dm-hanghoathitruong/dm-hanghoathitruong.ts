@@ -39,6 +39,7 @@ import { DmHangHoaThiTruongService } from '../dm-service/dm-hanghoathitruong/dm-
 import { Dm_HangHoaThiTruongDto } from '../dm-model/dm-hanghoathitruong.model';
 import { TextHighlightPipe } from '../../share/pipes/TextHighlight.pipe';
 import { PagedRequest } from '../dm-model/page-result';
+import { DmHanghoathitruongDialog } from './dm-hanghoathitruong-dialog/dm-hanghoathitruong-dialog';
 
 @Component({
   selector: 'app-dm-hanghoathitruong',
@@ -338,12 +339,56 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     this.loadTopLevelData();
   }
 
+  openDialog(hangHoa?: Dm_HangHoaThiTruongDto): void {
+    const dialogRef = this.dialog.open(DmHanghoathitruongDialog, {
+      width: '1200px',
+      maxWidth: '95vw',
+      height: 'auto',
+      maxHeight: '90vh',
+      data: {
+        hangHoa: hangHoa,
+        mode: hangHoa ? 'edit' : 'create'
+      },
+      disableClose: true,
+      panelClass: 'custom-dialog-container'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.showNotification(
+          hangHoa ? 'Cập nhật hàng hóa thành công' : 'Thêm mới hàng hóa thành công', 
+          'success'
+        );
+        this.loadTopLevelData(); // Refresh data
+      }
+    });
+  }
+
   editSelected(): void {
     if (!this.selectedRow) {
       this.showNotification('Vui lòng chọn một bản ghi để chỉnh sửa', 'error');
       return;
     }
-    this.showNotification('Chức năng đang phát triển', 'error');
+    
+    const dialogRef = this.dialog.open(DmHanghoathitruongDialog, {
+      width: '1200px',
+      maxWidth: '95vw',
+      height: 'auto',
+      maxHeight: '90vh',
+      data: {
+        hangHoa: this.selectedRow,
+        mode: 'edit'
+      },
+      disableClose: true,
+      panelClass: 'custom-dialog-container'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.showNotification('Cập nhật hàng hóa thành công', 'success');
+        this.loadTopLevelData(); // Refresh data
+      }
+    });
   }
 
   deleteSelected(): void {
@@ -351,10 +396,6 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
       this.showNotification('Vui lòng chọn một bản ghi để xóa', 'error');
       return;
     }
-    this.showNotification('Chức năng đang phát triển', 'error');
-  }
-
-  openDialog(hangHoa?: Dm_HangHoaThiTruongDto): void {
     this.showNotification('Chức năng đang phát triển', 'error');
   }
 

@@ -1,1 +1,108 @@
-<p>dm-hanghoathitruong-dialog works!</p>
+<div class="dialog-container" [class.submitting]="isSubmitting">
+  <div class="dialog-header">
+    <h2 class="dialog-title">
+      {{ isEditMode ? 'Cập nhật hàng hóa thị trường' : 'Thêm mới hàng hóa thị trường' }}
+    </h2>
+  </div>
+
+  <div class="dialog-content">
+    <form [formGroup]="hangHoaForm" (ngSubmit)="onSubmit()" class="form-container">
+
+      <!-- Mã cha -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Mã cha</mat-label>
+          <mat-select formControlName="parentId">
+            <mat-option value="">-- Chọn mã cha --</mat-option>
+            @for (item of parentItems; track item.id) {
+              <mat-option [value]="item.id">{{ item.ma }} - {{ item.ten }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Mã - Tên -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Mã <span class="required">*</span></mat-label>
+          <input matInput formControlName="ma" placeholder="Nhập mã">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Tên <span class="required">*</span></mat-label>
+          <input matInput formControlName="ten" placeholder="Nhập tên">
+        </mat-form-field>
+      </div>
+
+      <!-- Ngày hiệu lực - Ngày hết hiệu lực -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Ngày hiệu lực</mat-label>
+          <input matInput [matDatepicker]="startPicker" formControlName="ngayHieuLuc">
+          <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Ngày hết hiệu lực</mat-label>
+          <input matInput [matDatepicker]="endPicker" formControlName="ngayHetHieuLuc">
+          <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <!-- Ghi chú -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Ghi chú</mat-label>
+          <textarea matInput formControlName="ghiChu" rows="3"></textarea>
+        </mat-form-field>
+      </div>
+
+      <!-- Nút bật tắt -->
+      <div class="toggle-section">
+        <mat-slide-toggle 
+          formControlName="isHangHoa" 
+          (change)="onToggleHangHoa($event)" 
+          color="primary">
+          Là hàng hóa/tài sản
+        </mat-slide-toggle>
+      </div>
+
+      <!-- Đơn vị tính - Đặc tính -->
+      @if (isHangHoaMode) {
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Đơn vị tính</mat-label>
+            <mat-select formControlName="donViTinhId">
+              <mat-option value="">-- Chọn đơn vị tính --</mat-option>
+              @for (dvt of donViTinhList; track dvt.id) {
+                <mat-option [value]="dvt.id">
+                  {{ dvt.ma }} - {{ dvt.ten }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Đặc tính</mat-label>
+            <input matInput formControlName="dacTinh" placeholder="Nhập đặc tính">
+          </mat-form-field>
+        </div>
+      }
+
+    </form>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="dialog-actions">
+    <button mat-button type="button" (click)="onCancel()">Hủy</button>
+    <button 
+      mat-flat-button 
+      color="primary" 
+      type="button"
+      (click)="onSubmit()">
+      @if (isSubmitting) {
+        <mat-icon>hourglass_empty</mat-icon>
+      }
+      {{ isSubmitting ? 'Đang xử lý...' : (isEditMode ? 'Cập nhật' : 'Thêm mới') }}
+    </button>
+  </div>
+</div>

@@ -7,6 +7,7 @@ export interface Dm_HangHoaThiTruongDto extends BaseDto {
   dacTinh?: string | null;
   donViTinhId?: string | null;
   donViTinhTen?: string | null;
+  parentId?: string | null;
   ngayHieuLuc: Date;
   ngayHetHieuLuc: Date;
   children?: Dm_HangHoaThiTruongDto[];
