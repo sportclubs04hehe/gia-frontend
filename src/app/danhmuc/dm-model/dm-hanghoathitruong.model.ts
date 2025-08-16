@@ -7,13 +7,13 @@ export interface Dm_HangHoaThiTruongDto extends BaseDto {
   dacTinh?: string | null;
   donViTinhId?: string | null;
   donViTinhTen?: string | null;
-  parentId?: string | null;
   ngayHieuLuc: Date;
   ngayHetHieuLuc: Date;
-  children?: Dm_HangHoaThiTruongDto[];
+  isParent: boolean;
+  parentId?: string | null; 
   level?: number;
   isExpanded?: boolean;
-  hasChildren: boolean;
+  children?: Dm_HangHoaThiTruongDto[];
 }
 
 export interface DmHangHoaThiTruongCreateDto {
@@ -25,6 +25,7 @@ export interface DmHangHoaThiTruongCreateDto {
   ngayHieuLuc: Date;
   ngayHetHieuLuc: Date;
   parentId?: string | null;
+  isParent: boolean;
 }
 
 export interface DmHangHoaThiTruongUpdateDto {
@@ -37,44 +38,5 @@ export interface DmHangHoaThiTruongUpdateDto {
   ngayHieuLuc: Date;
   ngayHetHieuLuc: Date;
   parentId?: string | null;
-}
-
-export interface HangHoaThiTruongImportDto {
-  ma: string;
-  ten: string;
-  parentCode?: string | null;
-  donViTinh?: string | null;
-  ghiChu?: string | null;
-  dacTinh?: string | null;
-  ngayHieuLuc?: Date | null;
-  ngayHetHieuLuc?: Date | null;
-  rowIndex: number;
-}
-
-export interface Dm_HangHoaThiTruongTreeDto {
-  id: string;
-  ma: string;
-  ten: string;
-  ghiChu?: string | null;
-  ngayHieuLuc: Date;
-  ngayHetHieuLuc: Date;
-  hasChildren: boolean;
-  createdDate?: Date | null;
-  modifiedDate?: Date | null;
-  createdBy?: string | null;
-  modifiedBy?: string | null;
-  children: Dm_HangHoaThiTruongTreeDto[];
-}
-
-export interface Dm_HangHoaThiTruongFlatDto {
-  id: string;
-  ma: string;
-  ten: string;
-  ghiChu?: string | null;
-  dacTinh?: string | null;
-  donViTinhId?: string | null;
-  donViTinhTen?: string | null;
-  depth: number;
-  ngayHieuLuc: Date;
-  ngayHetHieuLuc: Date;
+  isParent: boolean;
 }

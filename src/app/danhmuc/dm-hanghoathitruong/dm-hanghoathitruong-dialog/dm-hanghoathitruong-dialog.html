@@ -12,12 +12,11 @@
       <div class="form-row">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Mã cha</mat-label>
-          <mat-select formControlName="parentId">
-            <mat-option value="">-- Chọn mã cha --</mat-option>
-            @for (item of parentItems; track item.id) {
-              <mat-option [value]="item.id">{{ item.ma }} - {{ item.ten }}</mat-option>
-            }
-          </mat-select>
+          <input matInput formControlName="parentId" readonly placeholder="-- Chọn mã cha --">
+          <button mat-icon-button matSuffix type="button" (click)="openParentItemPopup()" 
+                  matTooltip="Chọn từ danh sách">
+            <mat-icon>search</mat-icon>
+          </button>
         </mat-form-field>
       </div>
 

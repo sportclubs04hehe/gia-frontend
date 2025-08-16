@@ -62,10 +62,12 @@
             mat-cell
             *matCellDef="let row"
             class="ma-hanghoa-cell"
-            [ngClass]="{'parent-node': row.hasChildren}"
+            [ngClass]="{'parent-node': row.isParent}"
           >
             <div class="tree-node-content" [style.margin-left]="getIndentation(row.level || 0)">
-              @if (hasChildren(row)) {
+              <!-- Xóa debug info -->
+              
+              @if (row.hasChildren) {
                 <button
                   mat-icon-button
                   (click)="toggleNode(row); $event.stopPropagation()"
@@ -74,7 +76,7 @@
                 >
                   @if (!isLoadingChildren(row.id)) {
                     <mat-icon>
-                      {{ isExpanded(row) ? 'expand_more' : 'chevron_right' }}
+                      {{ row.isExpanded ? 'expand_more' : 'chevron_right' }}
                     </mat-icon>
                   } @else {
                     <mat-spinner diameter="16"></mat-spinner>
@@ -134,7 +136,7 @@
           *matRowDef="let row; columns: displayedColumns;"
           (click)="selectRow(row)"
           [class.selected-row]="row === selectedRow"
-          [class.has-children]="row.hasChildren"
+          [class.has-children]="row.isParent"
           [class.tree-level-0]="row.level === 0"
           [class.tree-level-1]="row.level === 1"
           [class.tree-level-2]="row.level === 2"

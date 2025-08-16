@@ -6,25 +6,29 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Subject, forkJoin } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { takeUntil, map } from 'rxjs/operators';
 
 import { DmHangHoaThiTruongService } from '../../dm-service/dm-hanghoathitruong/dm-hanghoathitruong.api';
 import { DmDonvitinh } from '../../dm-service/dm-donvitinh/dm-donvitinh.api';
 import { 
   Dm_HangHoaThiTruongDto, 
-  Dm_HangHoaThiTruongTreeDto,
   DmHangHoaThiTruongCreateDto, 
   DmHangHoaThiTruongUpdateDto 
 } from '../../dm-model/dm-hanghoathitruong.model';
 import { DmDonViTinhDto } from '../../dm-model/dm-donvitinh.model';
 import { PagedRequest } from '../../dm-model/page-result';
 import { codeExistsHangHoaTTValidator } from '../../../share/dm-validators/codeExistsHangHoaTTValidator';
+import { PopupTableColumn } from '../../../share/components/dialogs/popup-table-dialog/popup-table-dialog';
+import { PopupTableService } from '../../../share/services/popup-table.service';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
 
 export interface DialogData {
   hangHoa?: Dm_HangHoaThiTruongDto;
@@ -43,11 +47,14 @@ export interface DialogData {
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MatDatepickerModule,
     MatNativeDateModule,
     MatSlideToggleModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatSelectModule,
+    MatTableModule,        
+    MatPaginatorModule,   
+    MatSortModule,  
   ],
   templateUrl: './dm-hanghoathitruong-dialog.html',
   styleUrl: './dm-hanghoathitruong-dialog.css'
@@ -58,8 +65,8 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
   isSubmitting = false;
   isHangHoaMode = false;
 
-  parentItems: Dm_HangHoaThiTruongTreeDto[] = [];
   donViTinhList: DmDonViTinhDto[] = [];
+  selectedParentItem: Dm_HangHoaThiTruongDto | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -70,7 +77,8 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
     private hangHoaService: DmHangHoaThiTruongService,
     private donViTinhService: DmDonvitinh,
     private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private popupTableService: PopupTableService
   ) {}
 
   ngOnInit(): void {
@@ -96,7 +104,7 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
         [Validators.required, Validators.maxLength(50)], 
         [codeExistsHangHoaTTValidator(
           this.hangHoaService,
-          undefined, // parentId sẽ được cập nhật động
+          undefined,
           this.isEditMode ? this.data.hangHoa?.id : undefined
         )]
       ],
@@ -121,28 +129,6 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
         this.isHangHoaMode = isHangHoa;
         this.updateValidationRules();
       });
-
-    // Theo dõi thay đổi parentId để cập nhật validator
-    this.hangHoaForm.get('parentId')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(parentId => {
-        this.updateCodeValidator(parentId);
-      });
-  }
-
-  private updateCodeValidator(parentId?: string): void {
-    const maControl = this.hangHoaForm.get('ma');
-    if (maControl) {
-      // Cập nhật async validator với parentId mới
-      maControl.setAsyncValidators([
-        codeExistsHangHoaTTValidator(
-          this.hangHoaService,
-          parentId || undefined,
-          this.isEditMode ? this.data.hangHoa?.id : undefined
-        )
-      ]);
-      maControl.updateValueAndValidity();
-    }
   }
 
   private fillFormData(): void {
@@ -152,8 +138,13 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
     const isHangHoa = !!(hangHoa.donViTinhId || hangHoa.dacTinh);
     this.isHangHoaMode = isHangHoa;
 
+    // Load thông tin parent item để hiển thị
+    if (hangHoa.parentId) {
+      this.loadParentItemById(hangHoa.parentId);
+    }
+
     this.hangHoaForm.patchValue({
-      parentId: hangHoa.parentId || '',
+      parentId: this.getParentDisplayText(hangHoa.parentId || undefined),
       ma: hangHoa.ma,
       ten: hangHoa.ten,
       ngayHieuLuc: new Date(hangHoa.ngayHieuLuc),
@@ -167,38 +158,53 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
     this.updateValidationRules();
   }
 
+  private loadParentItemById(parentId: string): void {
+    this.hangHoaService.getAllParentItems().subscribe({
+      next: (items) => {
+        this.selectedParentItem = items.find(item => item.id === parentId) || null;
+        if (this.selectedParentItem) {
+          this.hangHoaForm.patchValue({
+            parentId: `${this.selectedParentItem.ma} - ${this.selectedParentItem.ten}`
+          });
+        }
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        console.error('Error loading parent item:', error);
+      }
+    });
+  }
+
+  private getParentDisplayText(parentId?: string): string {
+    if (!parentId) return '';
+    if (this.selectedParentItem && this.selectedParentItem.id === parentId) {
+      return `${this.selectedParentItem.ma} - ${this.selectedParentItem.ten}`;
+    }
+    return '';
+  }
+
   private updateValidationRules(): void {
-    const parentIdControl = this.hangHoaForm.get('parentId');
     const donViTinhIdControl = this.hangHoaForm.get('donViTinhId');
 
     if (this.isHangHoaMode) {
-      // Khi bật toggle, parentId và donViTinhId trở thành bắt buộc
-      parentIdControl?.setValidators([Validators.required]);
+      // Khi bật toggle, donViTinhId trở thành bắt buộc
       donViTinhIdControl?.setValidators([Validators.required]);
     } else {
       // Khi tắt toggle, chỉ giữ validation cơ bản
-      parentIdControl?.setValidators([]);
       donViTinhIdControl?.setValidators([]);
     }
 
-    parentIdControl?.updateValueAndValidity();
     donViTinhIdControl?.updateValueAndValidity();
   }
 
   private loadData(): void {
-    const requests = [
-      this.hangHoaService.getAllParentItems(),
-      this.donViTinhService.getPaged({
-        pageNumber: 1,
-        pageSize: 1000,
-        sortBy: 'Ma',
-        sortDescending: false
-      } as PagedRequest)
-    ];
-
-    forkJoin(requests).subscribe({
-      next: ([parentItems, donViTinhResult]) => {
-        this.parentItems = parentItems as Dm_HangHoaThiTruongTreeDto[];
+    this.donViTinhService.getPaged({
+      pageNumber: 1,
+      pageSize: 1000,
+      sortBy: 'Ma',
+      sortDescending: false
+    } as PagedRequest).subscribe({
+      next: (donViTinhResult) => {
         this.donViTinhList = (donViTinhResult as any).items || [];
         this.cdr.markForCheck();
       },
@@ -276,18 +282,23 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
       donViTinhId: formValue.isHangHoa ? formValue.donViTinhId || null : null,
       ngayHieuLuc: formValue.ngayHieuLuc,
       ngayHetHieuLuc: formValue.ngayHetHieuLuc,
-      parentId: formValue.parentId || null
+      parentId: this.selectedParentItem?.id || null,
+      isParent: !formValue.isHangHoa
     };
 
     this.hangHoaService.create(createDto).subscribe({
       next: (result) => {
         this.showNotification('Thêm mới hàng hóa thành công', 'success');
-        this.dialogRef.close(result);
+        // 🔥 FIX: Delay dialog close để tránh lỗi NG0100
+        setTimeout(() => {
+          this.dialogRef.close(result);
+        }, 0);
       },
       error: (error) => {
         console.error('Create error:', error);
         this.showNotification('Lỗi khi thêm mới hàng hóa', 'error');
         this.isSubmitting = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -302,18 +313,23 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
       donViTinhId: formValue.isHangHoa ? formValue.donViTinhId || null : null,
       ngayHieuLuc: formValue.ngayHieuLuc,
       ngayHetHieuLuc: formValue.ngayHetHieuLuc,
-      parentId: formValue.parentId || null
+      parentId: this.selectedParentItem?.id || null,
+      isParent: !formValue.isHangHoa
     };
 
     this.hangHoaService.update(this.data.hangHoa!.id, updateDto).subscribe({
       next: (result) => {
         this.showNotification('Cập nhật hàng hóa thành công', 'success');
-        this.dialogRef.close(result);
+        // 🔥 FIX: Delay dialog close để tránh lỗi NG0100
+        setTimeout(() => {
+          this.dialogRef.close(result);
+        }, 0);
       },
       error: (error) => {
         console.error('Update error:', error);
         this.showNotification('Lỗi khi cập nhật hàng hóa', 'error');
         this.isSubmitting = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -336,5 +352,93 @@ export class DmHanghoathitruongDialog implements OnInit, OnDestroy {
   
   onCancel(): void {
     this.dialogRef.close();
+  }
+
+  openParentItemPopup(): void {
+    const columns: PopupTableColumn[] = [
+      { key: 'displayText', label: 'Mã - Tên (Phân cấp)', width: '100%' }
+    ];
+
+    const popupConfig = {
+      title: 'Chọn hàng hóa cha',
+      columns: columns,
+      searchPlaceholder: 'Tìm kiếm theo mã hoặc tên...',
+      enablePagination: false,
+      pageSize: 10,
+      pageSizeOptions: [5, 10, 20, 50],
+      loadData: (searchTerm: string, page: number, pageSize: number) => {
+        console.log('Loading parent items...');
+        return this.hangHoaService.getAllParentItems().pipe(
+          map(items => {
+            const flattenedItems = this.flattenTreeItems(items).map(item => ({
+              ...item,
+              displayText: this.getHierarchicalDisplayText(item)
+            }));
+            
+            let filteredItems = flattenedItems;
+            if (searchTerm && searchTerm.trim()) {
+              const search = searchTerm.toLowerCase().trim();
+              filteredItems = flattenedItems.filter(item => 
+                item.ma.toLowerCase().includes(search) || 
+                item.ten.toLowerCase().includes(search)
+              );
+            }
+
+            return {
+              items: filteredItems,
+              totalCount: filteredItems.length
+            };
+          })
+        );
+      },
+      trackByFn: (index: number, item: any) => item.id
+    };
+
+    this.popupTableService.openPopup(popupConfig, {
+      width: '800px',
+      height: '600px'
+    }).subscribe(result => {
+      if (result) {
+        this.selectedParentItem = result.selectedItem;
+        this.hangHoaForm.patchValue({
+          parentId: `${result.selectedItem.ma} - ${result.selectedItem.ten}`
+        });
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Get hierarchical display text with indentation
+   */
+  private getHierarchicalDisplayText(item: Dm_HangHoaThiTruongDto & { level: number }): string {
+    const indentation = '  '.repeat(item.level); // 2 spaces per level
+    const prefix = item.level > 0 ? '└─ ' : '';
+    return `${indentation}${prefix}${item.ma} - ${item.ten}`;
+  }
+
+  /**
+   * Flatten tree structure to get all items including children with level information
+   */
+  private flattenTreeItems(treeItems: Dm_HangHoaThiTruongDto[]): (Dm_HangHoaThiTruongDto & { level: number })[] {
+    const result: (Dm_HangHoaThiTruongDto & { level: number })[] = [];
+    
+    const flatten = (items: Dm_HangHoaThiTruongDto[], level: number = 0) => {
+      items.forEach(item => {
+        const flatItem: Dm_HangHoaThiTruongDto & { level: number } = {
+          ...item,
+          children: [], // Remove children to avoid circular reference
+          level: level // Add level information
+        };
+        result.push(flatItem);
+        
+        if (item.children && item.children.length > 0) {
+          flatten(item.children, level + 1);
+        }
+      });
+    };
+    
+    flatten(treeItems);
+    return result;
   }
 }

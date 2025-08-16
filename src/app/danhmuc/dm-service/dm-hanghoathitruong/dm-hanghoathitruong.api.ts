@@ -5,7 +5,8 @@ import { environment } from '../../../../environments/environment.development';
 import { PagedResult, PagedRequest } from '../../dm-model/page-result';
 import { ValidationResult } from '../../dm-model/validation-result.model';
 import { ImportResultDto } from '../../dm-model/import-model';
-import { Dm_HangHoaThiTruongDto, Dm_HangHoaThiTruongTreeDto, DmHangHoaThiTruongCreateDto, DmHangHoaThiTruongUpdateDto } from '../../dm-model/dm-hanghoathitruong.model';
+import { Dm_HangHoaThiTruongDto, DmHangHoaThiTruongCreateDto, DmHangHoaThiTruongUpdateDto } from '../../dm-model/dm-hanghoathitruong.model';
+import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -20,14 +21,19 @@ export class DmHangHoaThiTruongService {
    * Lấy danh sách hàng hóa cấp cao nhất (không có parent)
    */
   getTopLevelItems(): Observable<Dm_HangHoaThiTruongDto[]> {
-    return this.http.get<Dm_HangHoaThiTruongDto[]>(`${this.endpoint}/top-level`);
+    return this.http.get<Dm_HangHoaThiTruongDto[]>(`${this.endpoint}/top-level`).pipe(
+      map(items => items.map(item => ({
+        ...item,
+        isParent: Boolean(item.isParent)
+      })))
+    );
   }
 
   /**
  * Lấy danh sách tất cả mặt hàng cha dạng cây
  */
-  getAllParentItems(): Observable<Dm_HangHoaThiTruongTreeDto[]> {
-    return this.http.get<Dm_HangHoaThiTruongTreeDto[]>(`${this.endpoint}/all-parents`);
+  getAllParentItems(): Observable<Dm_HangHoaThiTruongDto[]> {
+    return this.http.get<Dm_HangHoaThiTruongDto[]>(`${this.endpoint}/all-parents`);
   }
 
   /**
@@ -137,14 +143,19 @@ export class DmHangHoaThiTruongService {
    * Chuyển đổi cây thành danh sách phẳng để hiển thị
    */
   flattenTreeForDisplay(treeData: Dm_HangHoaThiTruongDto[]): Dm_HangHoaThiTruongDto[] {
-
     const result: Dm_HangHoaThiTruongDto[] = [];
 
     const flatten = (nodes: Dm_HangHoaThiTruongDto[], currentLevel: number = 0) => {
       nodes.forEach(node => {
-        result.push(node);
+        // Add current node với level chính xác
+        result.push({
+          ...node,
+          level: currentLevel
+        });
 
+        // If node is expanded and has children, add them recursively
         if (node.isExpanded && node.children && node.children.length > 0) {
+          console.log('🌳 Expanding node:', node.ma, 'with', node.children.length, 'children');
           flatten(node.children, currentLevel + 1);
         }
       });
@@ -152,6 +163,7 @@ export class DmHangHoaThiTruongService {
 
     flatten(treeData);
 
+    console.log('🌳 Flattened tree result:', result.length, 'items');
     return result;
   }
 }

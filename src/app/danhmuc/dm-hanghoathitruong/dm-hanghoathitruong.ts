@@ -81,19 +81,19 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
 
   private treeData: Dm_HangHoaThiTruongDto[] = [];
   private expandedNodes = new Set<string>();
-
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
-  isSearching = false;
-
+  
   // Constants
   private readonly CHILDREN_PAGE_SIZE = 150;
-  private readonly SCROLL_THRESHOLD = 0.8; // Load more when 80% scrolled
+  private readonly SCROLL_THRESHOLD = 0.8;
   
-  // Track loading state for each parent
-  private loadingChildren = new Map<string, boolean>();
-  private childrenPageNumbers = new Map<string, number>();
-  private childrenHasMore = new Map<string, boolean>();
+  // Simplified tracking
+  private nodeStates = new Map<string, {
+    loading: boolean;
+    pageNumber: number;
+    hasMore: boolean;
+  }>();
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -108,27 +108,13 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.searchSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(term => {
-        this.searchTerm = term;
-        this.pageNumber = 1;
-        this.loadTopLevelData();
-      });
-
+    this.setupSearch();
     this.loadTopLevelData();
   }
 
   ngAfterViewInit(): void {
-    if (this.paginator) {
-      this.paginator.pageSize = this.pageSize;
-      this.paginator.pageIndex = this.pageNumber - 1;
-    }
-
-    if (this.sort) {
-      this.sort.active = this.sortBy;
-      this.sort.direction = this.sortDescending ? 'desc' : 'asc';
-    }
+    this.setupPaginator();
+    this.setupSort();
   }
 
   ngOnDestroy(): void {
@@ -136,9 +122,32 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private setupSearch(): void {
+    this.searchSubject
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(term => {
+        this.searchTerm = term;
+        this.pageNumber = 1;
+        this.loadTopLevelData();
+      });
+  }
+
+  private setupPaginator(): void {
+    if (this.paginator) {
+      this.paginator.pageSize = this.pageSize;
+      this.paginator.pageIndex = this.pageNumber - 1;
+    }
+  }
+
+  private setupSort(): void {
+    if (this.sort) {
+      this.sort.active = this.sortBy;
+      this.sort.direction = this.sortDescending ? 'desc' : 'asc';
+    }
+  }
+
   loadTopLevelData(): void {
-    this.isLoading = true;
-    this.cdr.detectChanges();
+    this.setLoading(true);
 
     this.hangHoaThiTruongService.getTopLevelItems().subscribe({
       next: (data: Dm_HangHoaThiTruongDto[]) => {
@@ -146,26 +155,40 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
           ...item,
           level: 0,
           isExpanded: false,
-          hasChildren: item.hasChildren,
           children: []
         }));
         this.updateDisplayData();
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        this.setLoading(false);
       },
       error: () => {
         this.showNotification('Không thể tải dữ liệu, vui lòng thử lại sau', 'error');
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        this.setLoading(false);
       }
     });
   }
 
+  private setLoading(loading: boolean): void {
+    this.isLoading = loading;
+    this.cdr.detectChanges();
+  }
+
   updateDisplayData(): void {
     const flattenedData = this.hangHoaThiTruongService.flattenTreeForDisplay(this.treeData);
-    this.dataSource.data = flattenedData;
-    this.totalCount = flattenedData.length;
+    
+    const processedData = flattenedData.map(item => ({
+      ...item,
+      hasChildren: item.isParent === true,
+      isNodeExpanded: item.isExpanded || false
+    }));
+    
+    this.dataSource.data = processedData;
+    this.totalCount = processedData.length;
 
+    this.updatePaginator();
+    this.cdr.markForCheck();
+  }
+
+  private updatePaginator(): void {
     if (this.paginator) {
       this.paginator.length = this.totalCount;
       this.paginator.pageSize = this.pageSize;
@@ -174,50 +197,48 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleNode(node: Dm_HangHoaThiTruongDto): void {
-    if (!node.hasChildren) return;
+    if (!node.isParent) return;
 
-    if (node.isExpanded) {
-      // Collapse
-      node.isExpanded = false;
-      this.expandedNodes.delete(node.id);
-      this.updateDisplayData();
+    const treeNode = this.findNodeInTree(node.id);
+    if (!treeNode) return;
+
+    if (treeNode.isExpanded) {
+      this.collapseNode(treeNode);
     } else {
-      // Expand
-      if (!node.children || node.children.length === 0) {
-        // First time loading
-        this.loadChildren(node, false);
-      } else {
-        // Already has data, just expand
-        node.isExpanded = true;
-        this.expandedNodes.add(node.id);
-        this.updateDisplayData();
-      }
+      this.expandNode(treeNode);
+    }
+  }
+
+  private collapseNode(node: Dm_HangHoaThiTruongDto): void {
+    node.isExpanded = false;
+    this.expandedNodes.delete(node.id);
+    this.updateDisplayData();
+  }
+
+  private expandNode(node: Dm_HangHoaThiTruongDto): void {
+    if (!node.children || node.children.length === 0) {
+      this.loadChildren(node, false);
+    } else {
+      node.isExpanded = true;
+      this.expandedNodes.add(node.id);
+      this.updateDisplayData();
     }
   }
 
   loadChildren(parentNode: Dm_HangHoaThiTruongDto, loadMore: boolean = false): void {
     const parentId = parentNode.id;
+    const state = this.getNodeState(parentId);
     
-    // Prevent duplicate loading
-    if (this.loadingChildren.get(parentId)) {
-      return;
-    }
+    if (state.loading) return;
 
-    this.loadingChildren.set(parentId, true);
+    this.setNodeLoading(parentId, true);
     
-    // Get current page number for this parent
-    let currentPage = this.childrenPageNumbers.get(parentId) || 1;
-    if (loadMore) {
-      currentPage++;
-    } else {
-      currentPage = 1; // Reset for fresh load
-    }
-
+    const currentPage = loadMore ? state.pageNumber + 1 : 1;
     const request: PagedRequest = {
       pageNumber: currentPage,
       pageSize: this.CHILDREN_PAGE_SIZE,
-      sortBy: 'Ma', // Fixed sort for children
-      sortDescending: false // Thêm dòng này - mặc định sort ascending
+      sortBy: 'Ma',
+      sortDescending: false
     };
 
     this.hangHoaThiTruongService.getChildren(parentNode.id, request, this.searchTerm).subscribe({
@@ -226,60 +247,83 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
           ...item,
           level: (parentNode.level || 0) + 1,
           isExpanded: false,
-          hasChildren: item.hasChildren,
           children: []
         }));
 
-        if (loadMore && parentNode.children) {
-          // Append to existing children
-          parentNode.children = [...parentNode.children, ...newChildren];
-        } else {
-          // Fresh load
-          parentNode.children = newChildren;
-          parentNode.isExpanded = true;
-          this.expandedNodes.add(parentNode.id);
-        }
-
-        // Update tracking
-        this.childrenPageNumbers.set(parentId, currentPage);
-        this.childrenHasMore.set(parentId, newChildren.length === this.CHILDREN_PAGE_SIZE);
-        this.loadingChildren.set(parentId, false);
-
+        this.updateTreeWithChildren(parentId, newChildren, loadMore);
+        this.updateNodeState(parentId, currentPage, newChildren.length === this.CHILDREN_PAGE_SIZE);
+        this.setNodeLoading(parentId, false);
         this.updateDisplayData();
-        this.isLoading = false;
-        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('❌ loadChildren ERROR:', error);
-        this.loadingChildren.set(parentId, false);
+        this.setNodeLoading(parentId, false);
         this.showNotification('Không thể tải dữ liệu con, vui lòng thử lại sau', 'error');
-        this.isLoading = false;
-        this.cdr.detectChanges();
       }
     });
   }
 
-  // Handle scroll events for lazy loading
+  private getNodeState(nodeId: string) {
+    if (!this.nodeStates.has(nodeId)) {
+      this.nodeStates.set(nodeId, { loading: false, pageNumber: 1, hasMore: true });
+    }
+    return this.nodeStates.get(nodeId)!;
+  }
+
+  private setNodeLoading(nodeId: string, loading: boolean): void {
+    const state = this.getNodeState(nodeId);
+    state.loading = loading;
+    this.cdr.markForCheck();
+  }
+
+  private updateNodeState(nodeId: string, pageNumber: number, hasMore: boolean): void {
+    const state = this.getNodeState(nodeId);
+    state.pageNumber = pageNumber;
+    state.hasMore = hasMore;
+  }
+
+  private updateTreeWithChildren(parentId: string, newChildren: Dm_HangHoaThiTruongDto[], loadMore: boolean): void {
+    const treeParent = this.findNodeInTree(parentId);
+    if (!treeParent) return;
+
+    if (loadMore && treeParent.children) {
+      treeParent.children = [...treeParent.children, ...newChildren];
+    } else {
+      treeParent.children = newChildren;
+      treeParent.isExpanded = true;
+      this.expandedNodes.add(parentId);
+    }
+  }
+
+  private findNodeInTree(nodeId: string): Dm_HangHoaThiTruongDto | null {
+    const findNode = (nodes: Dm_HangHoaThiTruongDto[]): Dm_HangHoaThiTruongDto | null => {
+      for (const node of nodes) {
+        if (node.id === nodeId) return node;
+        if (node.children) {
+          const found = findNode(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    return findNode(this.treeData);
+  }
+
+  // Event handlers
   onTableScroll(event: Event): void {
     const element = event.target as HTMLElement;
-    const scrollTop = element.scrollTop;
-    const scrollHeight = element.scrollHeight;
-    const clientHeight = element.clientHeight;
+    const scrollPercentage = (element.scrollTop + element.clientHeight) / element.scrollHeight;
     
-    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
-    
-    // Load more when scrolled 80%
     if (scrollPercentage >= this.SCROLL_THRESHOLD) {
       this.loadMoreChildrenIfNeeded();
     }
   }
 
   private loadMoreChildrenIfNeeded(): void {
-    // Find parent nodes that are expanded and can load more
-    const expandedParents = this.findExpandedParentsNeedingMore();
-    
-    expandedParents.forEach(parent => {
-      if (this.childrenHasMore.get(parent.id) && !this.loadingChildren.get(parent.id)) {
+    this.findExpandedParentsNeedingMore().forEach(parent => {
+      const state = this.getNodeState(parent.id);
+      if (state.hasMore && !state.loading) {
         this.loadChildren(parent, true);
       }
     });
@@ -289,7 +333,8 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     const result: Dm_HangHoaThiTruongDto[] = [];
     
     const checkNode = (node: Dm_HangHoaThiTruongDto) => {
-      if (node.isExpanded && node.children && this.childrenHasMore.get(node.id)) {
+      const state = this.getNodeState(node.id);
+      if (node.isExpanded && node.children && state.hasMore) {
         result.push(node);
       }
       
@@ -329,39 +374,14 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
   clearSearch(): void {
     this.searchTerm = '';
     this.pageNumber = 1;
-    
-    // Clear children tracking
-    this.childrenPageNumbers.clear();
-    this.childrenHasMore.clear();
-    this.loadingChildren.clear();
+    this.nodeStates.clear();
     this.expandedNodes.clear();
-    
     this.loadTopLevelData();
   }
 
+  // Dialog operations
   openDialog(hangHoa?: Dm_HangHoaThiTruongDto): void {
-    const dialogRef = this.dialog.open(DmHanghoathitruongDialog, {
-      width: '1200px',
-      maxWidth: '95vw',
-      height: 'auto',
-      maxHeight: '90vh',
-      data: {
-        hangHoa: hangHoa,
-        mode: hangHoa ? 'edit' : 'create'
-      },
-      disableClose: true,
-      panelClass: 'custom-dialog-container'
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.showNotification(
-          hangHoa ? 'Cập nhật hàng hóa thành công' : 'Thêm mới hàng hóa thành công', 
-          'success'
-        );
-        this.loadTopLevelData(); // Refresh data
-      }
-    });
+    this.openDialogWithData(hangHoa, hangHoa ? 'edit' : 'create');
   }
 
   editSelected(): void {
@@ -369,30 +389,34 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
       this.showNotification('Vui lòng chọn một bản ghi để chỉnh sửa', 'error');
       return;
     }
-    
+    this.openDialogWithData(this.selectedRow, 'edit');
+  }
+
+  private openDialogWithData(hangHoa: Dm_HangHoaThiTruongDto | undefined, mode: 'edit' | 'create'): void {
     const dialogRef = this.dialog.open(DmHanghoathitruongDialog, {
       width: '1200px',
       maxWidth: '95vw',
       height: 'auto',
       maxHeight: '90vh',
-      data: {
-        hangHoa: this.selectedRow,
-        mode: 'edit'
-      },
+      data: { hangHoa, mode },
       disableClose: true,
       panelClass: 'custom-dialog-container'
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.showNotification('Cập nhật hàng hóa thành công', 'success');
-        this.loadTopLevelData(); // Refresh data
+        const message = mode === 'edit' ? 'Cập nhật hàng hóa thành công' : 'Thêm mới hàng hóa thành công';
+        this.showNotification(message, 'success');
+        
+        setTimeout(() => {
+          this.loadTopLevelData();
+        }, 100);
       }
     });
   }
 
   deleteSelected(): void {
-    if (!this.selectedRow || !this.selectedRow.id) {
+    if (!this.selectedRow?.id) {
       this.showNotification('Vui lòng chọn một bản ghi để xóa', 'error');
       return;
     }
@@ -403,6 +427,7 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     this.showNotification('Chức năng đang phát triển', 'error');
   }
 
+  // Utility methods
   showNotification(message: string, type: 'success' | 'error'): void {
     this.snackBar.open(message, 'Đóng', {
       duration: 3000,
@@ -428,22 +453,12 @@ export class DmHanghoathitruong implements OnInit, AfterViewInit, OnDestroy {
     return `${level * 20}px`;
   }
 
-  hasChildren(node: Dm_HangHoaThiTruongDto): boolean {
-    return node.hasChildren || false;
-  }
-
-  isExpanded(node: Dm_HangHoaThiTruongDto): boolean {
-    return node.isExpanded || false;
-  }
-
-  // Helper method to check if parent can load more
   canLoadMore(parentId: string): boolean {
-    return this.childrenHasMore.get(parentId) === true && 
-           this.loadingChildren.get(parentId) !== true;
+    const state = this.getNodeState(parentId);
+    return state.hasMore && !state.loading;
   }
 
-  // Helper method to get loading state
   isLoadingChildren(parentId: string): boolean {
-    return this.loadingChildren.get(parentId) === true;
+    return this.getNodeState(parentId).loading;
   }
 }
